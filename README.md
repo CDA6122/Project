@@ -147,9 +147,9 @@ sudo find /usr/lib/node_modules/electron-builder/node_modules/app-builder-lib/te
 ## How we did it
 
 1. First, we picked HTML/CSS for the presentation layer.[^htmlcss]
-2. Second, we picked C# to drive changes to the presentation layer (instead of JavaScript) and to perform the simulation itself.[^ecma334][^ecma262]
+2. Second, we picked C# to drive changes to the presentation layer (instead of JavaScript) and to perform the simulation itself.[^ecma334] [^ecma262]
 3. Tools (all cross-platform):
-   1. Electron was used as a way to bundle Chromium for rendering the HTML/CSS. It runs as a Desktop application.[^electron][^chromium]
+   1. Electron was used as a way to bundle Chromium for rendering the HTML/CSS. It runs as a Desktop application.[^electron] [^chromium]
    2. Normally, Electron has a JavaScript API for controlling application logic, but we used Electron.NET so we can use .NET Core to serve an in-process web application instead of Node.js or others.[^electronnet]
    3. Electron uses Node.js as an additional runtime and Electron.NET also uses npm packages such as for ElectronHostHook.[^nodejs]
    4. Electron.NET works on .NET Core 2.2, but we are using it to host a web application on .NET Core 3.0 (hence two different versions in the required dependencies).[^dotnet]
@@ -160,16 +160,21 @@ sudo find /usr/lib/node_modules/electron-builder/node_modules/app-builder-lib/te
 
 ## References
 
-[^windows]:  http://microsoft.com/windows
-[^macos]: https://www.apple.com/macos
-[^linux]: https://www.kernel.org/
-[^wine]:  https://www.winehq.org/
-[^htmlcss]:  https://www.w3.org/standards/webdesign/htmlcss.html 
-[^ecma334]:  (C#) https://www.ecma-international.org/publications/standards/Ecma-334.htm 
-[^ecma262]:  (JavaScript) https://www.ecma-international.org/publications/standards/Ecma-262.htm 
-[^electron]: https://electronjs.org/
-[^chromium]: https://www.chromium.org/
-[^electronnet]: https://github.com/ElectronNET/Electron.NET
-[^nodejs]: https://nodejs.org/
-[^dotnet]: https://dotnet.microsoft.com/
+[^windows]:  http://microsoft.com/windows  
+[^macos]: https://www.apple.com/macos  
+[^linux]: https://www.kernel.org/  
+[^wine]:  https://www.winehq.org/  
+[^htmlcss]:  https://www.w3.org/standards/webdesign/htmlcss.html
+
+(C#)
+[^ecma334]:  https://www.ecma-international.org/publications/standards/Ecma-334.htm
+
+(JavaScript)
+[^ecma262]:  https://www.ecma-international.org/publications/standards/Ecma-262.htm
+
+[^electron]: https://electronjs.org/  
+[^chromium]: https://www.chromium.org/  
+[^electronnet]: https://github.com/ElectronNET/Electron.NET  
+[^nodejs]: https://nodejs.org/  
+[^dotnet]: https://dotnet.microsoft.com/  
 [^blazor]: https://docs.microsoft.com/en-us/aspnet/core/blazor
