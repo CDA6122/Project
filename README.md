@@ -48,7 +48,7 @@ In the Releases tab on the GitHub CDA6122 Project page for each release version,
   * `Project-[version]-mac.zip`
 * Linux[^linux]
   * `Project-[version].AppImage` **packed application*
-  * `electron.net.host_[version]_amd64.snap`
+  * `electron.net.host_[version]_amd64.snap` **packed application, for installation*
   * `latest-linux.yml`
   * `linux-unpacked.tar.gz`
 
