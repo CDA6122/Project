@@ -147,7 +147,7 @@ sudo find /usr/lib/node_modules/electron-builder/node_modules/app-builder-lib/te
 ## How we did it
 
 1. First, we picked HTML/CSS for the presentation layer.[^htmlcss]
-2. Second, we picked C# to drive changes to the presentation layer (instead of JavaScript) and to perform the simulation itself. (C#) [^ecma334] (JavaScript) [^ecma262]
+2. Second, we picked C# to drive changes to the presentation layer (instead of JavaScript) and to perform the simulation itself. (C#)[^ecma334] (JavaScript)[^ecma262]
 3. Tools (all cross-platform):
    1. Electron was used as a way to bundle Chromium for rendering the HTML/CSS. It runs as a Desktop application.[^electron] [^chromium]
    2. Normally, Electron has a JavaScript API for controlling application logic, but we used Electron.NET so we can use .NET Core to serve an in-process web application instead of Node.js or others.[^electronnet]
