@@ -1,0 +1,23 @@
+﻿<!--
+ - Authors: David Bruck (dbruck1@fau.edu) and Freguens Mildort (fmildort2015@fau.edu)
+ - Original source: https://github.com/CDA6122/Project
+ - License: BSD 2-Clause License (https://opensource.org/licenses/BSD-2-Clause)
+ -->
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="ElectronNet.API" Version="5.22.14" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Update="electron.manifest.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Update="ElectronHostHook\**\*.*">
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

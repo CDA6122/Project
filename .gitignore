@@ -1,0 +1,5 @@
+*.user
+*.userprefs
+[Bb]in/
+[Oo]bj/
+node_modules/

@@ -1,0 +1,25 @@
+﻿@*
+ * Authors: David Bruck (dbruck1@fau.edu) and Freguens Mildort (fmildort2015@fau.edu)
+ * Original source: https://github.com/CDA6122/Project
+ * License: BSD 2-Clause License (https://opensource.org/licenses/BSD-2-Clause)
+ *@
+@page "/"
+@namespace Project.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NoElectron</title>
+    <base href="~/" />
+</head>
+<body>
+    <app>
+        @(await Html.RenderComponentAsync<App>(RenderMode.ServerPrerendered))
+    </app>
+
+    <script src="_framework/blazor.server.js"></script>
+</body>
+</html>
