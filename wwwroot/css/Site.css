@@ -1,0 +1,36 @@
+﻿/*!
+ * Authors: David Bruck (dbruck1@@fau.edu) and Freguens Mildort (fmildort2015@@fau.edu)
+ * Original source: https://github.com/CDA6122/Project
+ * License: BSD 2-Clause License (https://opensource.org/licenses/BSD-2-Clause)
+ **/
+html {
+    overflow-y: scroll;
+}
+table.header {
+    width: 100%;
+    padding: 0 10px;
+}
+label.error {
+    color: red;
+}
+input.error {
+    border-color: red;
+}
+svg.nodes {
+    max-height: 80vh;
+}
+div.svg-text {
+    height: calc(100% - 10px);
+    overflow: auto;
+    padding: 5px;
+    word-break: break-word;
+}
+.text-right {
+    text-align: right;
+}
+.text-center {
+    text-align: center;
+}
+.full-width {
+    width: 100%;
+}

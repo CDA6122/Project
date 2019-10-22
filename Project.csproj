@@ -11,6 +11,7 @@
     <TypeScriptToolsVersion>latest</TypeScriptToolsVersion>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="BuildBundlerMinifier" Version="3.1.430" />
     <PackageReference Include="ElectronNet.API" Version="5.22.14" />
   </ItemGroup>
   <ItemGroup>

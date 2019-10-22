@@ -4,3 +4,6 @@
 [Oo]bj/
 node_modules/
 .vs/
+*.min.js
+*.min.js.map
+*.min.css

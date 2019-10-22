@@ -1,19 +1,181 @@
 ﻿@*
- * Authors: David Bruck (dbruck1@fau.edu) and Freguens Mildort (fmildort2015@fau.edu)
- * Original source: https://github.com/CDA6122/Project
- * License: BSD 2-Clause License (https://opensource.org/licenses/BSD-2-Clause)
- *@
+    * Authors: David Bruck (dbruck1@fau.edu) and Freguens Mildort (fmildort2015@fau.edu)
+    * Original source: https://github.com/CDA6122/Project
+    * License: BSD 2-Clause License (https://opensource.org/licenses/BSD-2-Clause)
+*@
 @page "/"
+@inject IJSRuntime jsRuntime
+@using Project.Models
+<table class="header">
+    <tbody>
+        <tr>
+            <td>
+                <h1>CDA6122 Fall 2019 Project</h1>
+            </td>
+            <td class="text-right">
+                David Bruck<br/>
+                Freguens Mildort
+            </td>
+        </tr>
+    </tbody>
+</table>
 
-<p>Current count: @currentCount</p>
+@if (simEvents == null)
+{
+    <fieldset>
+        <legend>
+            Simulation Parameters
+        </legend>
+        <label for="nodes" class="@nodesClass">Number of nodes:</label>
+        <input id="nodes" type="number" value="@nodesString" @onchange="OnNodesChanged" class="@nodesClass" />
+        <button @onclick="OnRunSimulation" disabled="@(!string.IsNullOrEmpty(nodesClass))">
+            Run Simulation
+        </button>
+    </fieldset>
+}
 
-<button @onclick="IncrementCount">Click me</button>
+<svg xmlns="http://www.w3.org/2000/svg"
+     class="nodes" viewBox="0 0 100 100">
+    @for (var nodeIdx = 0; nodeIdx < circleCalc.Nodes; nodeIdx++)
+    {
+        <circle stroke="black" stroke-width="@(circleCalc.Radius / 5d)" fill="none" r="@(circleCalc.Radius)"
+                cx="@(Math.Cos((circleCalc.DegreesPerNode * nodeIdx) * (Math.PI / 180)) * 30 + 40)"
+                cy="@(Math.Sin((circleCalc.DegreesPerNode * nodeIdx) * (Math.PI / 180)) * 30 + 40)" />
+    }
+    @if (simEvents == null)
+    {
+        <foreignObject x="25" y="400" width="450" height="70" transform="scale(0.2)">
+            <div xmlns="http://www.w3.org/1999/xhtml" class="svg-text" id="eventText">
+                Simulation not yet started.
+            </div>
+        </foreignObject>
+        <rect x="5" y="80" width="90" height="15" stroke="red" stroke-width="0.5" fill="none" />
+    }
+    else
+    {
+        <foreignObject x="25" y="450" width="350" height="30" transform="scale(0.2)">
+            <table xmlns="http://www.w3.org/1999/xhtml" class="full-width">
+                <tbody>
+                    <tr>
+                        <td><button id="previousEvent">Previous Event</button></td>
+                        <td class="text-center" id="currentEventNumber"></td>
+                        <td class="text-right"><button id="nextEvent">Next Event</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </foreignObject>
+        <foreignObject x="400" y="25" width="100" height="450" transform="scale(0.2)">
+            <div xmlns="http://www.w3.org/1999/xhtml" class="svg-text" id="eventText"></div>
+        </foreignObject>
+        <rect x="80" y="5" width="25" height="90" stroke="black" stroke-width="0.5" fill="none" />
+    }
+</svg>
+
+<pre>
+Copyright (&copy;) 2019 David Bruck and Freguens Mildort
+Authors: David Bruck (<a href="mailto:dbruck1@@fau.edu">dbruck1@@fau.edu</a>) and Freguens Mildort (<a href="mailto:fmildort2015@@fau.edu">fmildort2015@@fau.edu</a>)
+Original source: <a href="https://github.com/CDA6122/Project" target="_blank">https://github.com/CDA6122/Project</a>
+License: BSD 2-Clause License (<a href="https://opensource.org/licenses/BSD-2-Clause" target="_blank">https://opensource.org/licenses/BSD-2-Clause</a>)
+</pre>
 
 @code {
-    int currentCount = 0;
+    readonly CircleCalculations circleCalc = new CircleCalculations(maxRadius: 5d, startingNodes: 6);
+    IReadOnlyList<SimulationEvent>? simEvents;
+    int eventIdx = 0;
+    string nodesClass = "";
+    string nodesString { get => circleCalc.Nodes.ToString(); }
 
-    void IncrementCount()
+    void OnNodesChanged(ChangeEventArgs e)
     {
-        currentCount++;
+        if (int.TryParse(e.Value.ToString(), out var tempNodes)
+            && tempNodes > 3)
+        {
+            circleCalc.Nodes = tempNodes;
+            nodesClass = "";
+        }
+        else
+        {
+            nodesClass = "error";
+        }
     }
+
+    async Task OnRunSimulation()
+    {
+        simEvents = Simulation.Run();
+        eventIdx = 0;
+        await DisablePreviousEvent();
+        if (simEvents.Count <= 1)
+        {
+            await DisableNextEvent();
+        }
+        await ProcessChangedEventIdx();
+        await BindPreviousNextEventButtons();
+    }
+
+    string GetCurrentEventNumber()
+    {
+        return $"Event {eventIdx + 1:#,##0} of {simEvents?.Count:#,##0}";
+    }
+
+    MarkupString GetEventText()
+    {
+        return (MarkupString)"Sample event:<br /><br />Data 1<br />Data 2<br />Data 3<br />Data 4<br />Data 5<br />Data 6<br />Data 7<br />Data 8<br />Data 9";
+    }
+
+    #region JavaScript interop (BlazorServer currently has a bug modifying svg foreignObject children)
+
+    [JSInvokable]
+    public async Task OnPreviousEvent()
+    {
+        if (--eventIdx == 0)
+        {
+            await DisablePreviousEvent();
+        }
+        await EnableNextEvent();
+        await ProcessChangedEventIdx();
+    }
+    
+    [JSInvokable]
+    public async Task OnNextEvent()
+    {
+        if (++eventIdx == simEvents?.Count - 1)
+        {
+            await DisableNextEvent();
+        }
+        await EnablePreviousEvent();
+        await ProcessChangedEventIdx();
+    }
+
+    async Task ProcessChangedEventIdx()
+    {
+        await jsRuntime.InvokeVoidAsync("setCurrentEventNumber", GetCurrentEventNumber());
+        await jsRuntime.InvokeVoidAsync("setEventText", GetEventText().Value);
+    }
+
+    async Task DisablePreviousEvent()
+    {
+        await jsRuntime.InvokeVoidAsync("disablePreviousEvent");
+    }
+
+    async Task EnablePreviousEvent()
+    {
+        await jsRuntime.InvokeVoidAsync("enablePreviousEvent");
+    }
+
+    async Task DisableNextEvent()
+    {
+        await jsRuntime.InvokeVoidAsync("disableNextEvent");
+    }
+
+    async Task EnableNextEvent()
+    {
+        await jsRuntime.InvokeVoidAsync("enableNextEvent");
+    }
+
+    async Task BindPreviousNextEventButtons()
+    {
+        await jsRuntime.InvokeVoidAsync("bindPreviousNextEventButtons", DotNetObjectReference.Create(this));
+    }
+
+    #endregion JavaScript interop
 }
