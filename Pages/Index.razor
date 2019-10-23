@@ -6,6 +6,8 @@
 @page "/"
 @inject IJSRuntime jsRuntime
 @using Project.Models
+@using System.Text.RegularExpressions
+@using System.Web
 <table class="header">
     <tbody>
         <tr>
@@ -79,8 +81,10 @@ License: BSD 2-Clause License (<a href="https://opensource.org/licenses/BSD-2-Cl
 </pre>
 
 @code {
+    static readonly Regex LineTerminationRegex = new Regex("\\r\\n?|\\n", RegexOptions.Compiled | RegexOptions.Singleline);
     readonly CircleCalculations circleCalc = new CircleCalculations(maxRadius: 5d, startingNodes: 6);
-    IReadOnlyList<SimulationEvent>? simEvents;
+    IReadOnlyList<(string name, long size)> simFiles;
+    IReadOnlyList<SimulationEventBase> simEvents;
     int eventIdx = 0;
     string nodesClass = "";
     string nodesString { get => circleCalc.Nodes.ToString(); }
@@ -101,7 +105,7 @@ License: BSD 2-Clause License (<a href="https://opensource.org/licenses/BSD-2-Cl
 
     async Task OnRunSimulation()
     {
-        simEvents = Simulation.Run();
+        (simFiles, simEvents) = Simulation.Run();
         eventIdx = 0;
         await DisablePreviousEvent();
         if (simEvents.Count <= 1)
@@ -119,7 +123,11 @@ License: BSD 2-Clause License (<a href="https://opensource.org/licenses/BSD-2-Cl
 
     MarkupString GetEventText()
     {
-        return (MarkupString)"Sample event:<br /><br />Data 1<br />Data 2<br />Data 3<br />Data 4<br />Data 5<br />Data 6<br />Data 7<br />Data 8<br />Data 9";
+        return (MarkupString)string.Join(
+            "<br/>",
+            LineTerminationRegex
+                .Split(simEvents?[eventIdx]?.ToString())
+                .Select(HttpUtility.HtmlEncode));
     }
 
     #region JavaScript interop (BlazorServer currently has a bug modifying svg foreignObject children)
@@ -134,7 +142,7 @@ License: BSD 2-Clause License (<a href="https://opensource.org/licenses/BSD-2-Cl
         await EnableNextEvent();
         await ProcessChangedEventIdx();
     }
-    
+
     [JSInvokable]
     public async Task OnNextEvent()
     {
