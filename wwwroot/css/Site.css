@@ -31,6 +31,26 @@ div.svg-text {
 .text-center {
     text-align: center;
 }
+.text-left {
+    text-align: left;
+}
 .full-width {
     width: 100%;
 }
+.fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 402px);
+    grid-gap: 10px;
+    justify-content: space-evenly;
+}
+    .fields > div {
+        text-align: right;
+    }
+        .fields > div > label {
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 5px;
+        }
+        .fields > div > input {
+            vertical-align: middle;
+        }

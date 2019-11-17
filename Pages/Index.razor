@@ -5,6 +5,7 @@
 *@
 @page "/"
 @inject IJSRuntime jsRuntime
+@using Project.Extensions;
 @using Project.Models
 @using System.Text.RegularExpressions
 @using System.Web
@@ -14,8 +15,8 @@
             <td>
                 <h1>CDA6122 Fall 2019 Project</h1>
             </td>
-            <td class="text-right">
-                David Bruck<br/>
+            <td>
+                David Bruck<br />
                 Freguens Mildort
             </td>
         </tr>
@@ -24,52 +25,166 @@
 
 @if (simEvents == null)
 {
-    <fieldset>
-        <legend>
+    <fieldset class="text-right">
+        <legend class="text-left">
             Simulation Parameters
         </legend>
-        <label for="nodes" class="@nodesClass">Number of nodes:</label>
-        <input id="nodes" type="number" value="@nodesString" @onchange="OnNodesChanged" class="@nodesClass" />
-        <button @onclick="OnRunSimulation" disabled="@(!string.IsNullOrEmpty(nodesClass))">
+        <div class="fields">
+            <div>
+                <label for="nodes" class="@fields.Parameters.NodesClass">Number of nodes<br />(minimum of 3):</label>
+                <input id="nodes" type="number" value="@fields.Parameters.Nodes"
+                       @onchange="fields.CircleCalc.OnNodesChanged" class="@fields.Parameters.NodesClass" />
+            </div>
+            <div>
+                <label for="simulationLengthMinutes" class="@fields.Parameters.SimulationLengthMinutesClass">Simulation length<br />(minutes):</label>
+                <input id="simulationLengthMinutes" type="number" value="@fields.Parameters.SimulationLengthMinutes"
+                       @onchange="fields.Parameters.OnSimulationLengthMinutesChanged" class="@fields.Parameters.SimulationLengthMinutesClass" />
+            </div>
+            <div>
+                <label for="expectedFilesPerNode" class="@fields.Parameters.ExpectedFilesPerNodeClass">Expected number of files<br />requested per node (λ):</label>
+                <input id="expectedFilesPerNode" type="number" value="@fields.Parameters.ExpectedFilesPerNode"
+                       @onchange="fields.Parameters.OnExpectedFilesPerNodeChanged" class="@fields.Parameters.ExpectedFilesPerNodeClass" />
+            </div>
+            <div>
+                <label for="meanFileSizeMegabytes" class="@fields.Parameters.MeanFileSizeMegabytesClass">
+                    Mean file size in 1024<sup>2</sup> bytes<br />(μ in MB) =
+                    @((fields.Parameters.MeanFileSizeMegabytes * 1024 * 1024 * 8 / fields.Parameters.PlaybackBitrate / 60).ToString("#,##0.00")) minutes:
+                </label>
+                <input id="meanFileSizeMegabytes" type="number" value="@fields.Parameters.MeanFileSizeMegabytes"
+                       @onchange="fields.Parameters.OnMeanFileSizeMegabytesChanged" class="@fields.Parameters.MeanFileSizeMegabytesClass" />
+            </div>
+            <div>
+                <label for="fileSizeMegabytesStandardDeviation" class="@fields.Parameters.FileSizeMegabytesStandardDeviationClass">
+                    File size standard deviation<br />in 1024<sup>2</sup> (σ in MB):
+                </label>
+                <input id="fileSizeMegabytesStandardDeviation" type="number" value="@fields.Parameters.FileSizeMegabytesStandardDeviation"
+                       @onchange="fields.Parameters.OnFileSizeMegabytesStandardDeviationChanged" class="@fields.Parameters.FileSizeMegabytesStandardDeviationClass" />
+            </div>
+            <div>
+                <label for="playbackBitrate" class="@fields.Parameters.PlaybackBitrateClass">Playback constant bitrate in<br />bits per second (bps):</label>
+                <input id="playbackBitrate" type="number" value="@fields.Parameters.PlaybackBitrate"
+                       @onchange="fields.Parameters.OnPlaybackBitrateChanged" class="@fields.Parameters.PlaybackBitrateClass" />
+            </div>
+            <div>
+                <label for="nodeCapacityGigabytes" class="@fields.Parameters.NodeCapacityGigabytesClass">Max storage capacity per<br />node in 1024<sup>3</sup> bytes (GB):</label>
+                <input id="nodeCapacityGigabytes" type="number" value="@fields.Parameters.NodeCapacityGigabytes"
+                       @onchange="fields.Parameters.OnNodeCapacityGigabytesChanged" class="@fields.Parameters.NodeCapacityGigabytesClass" />
+            </div>
+            <div>
+                <label for="maxBandwidthMegabitsPerSecond" class="@fields.Parameters.MaxBandwidthMegabitsPerSecondClass">
+                    1 hop max bandwidth in<br />1024<sup>2</sup> bits/second (mbps)
+                    <sup><b><a href="#Reference1" onclick="event.stopPropagation()">1</a></b></sup>:
+                </label>
+                <input id="maxBandwidthMegabitsPerSecond" type="number" value="@fields.Parameters.MaxBandwidthMegabitsPerSecond"
+                       @onchange="fields.Parameters.OnMaxBandwidthMegabitsPerSecondChanged" class="@fields.Parameters.MaxBandwidthMegabitsPerSecondClass" />
+            </div>
+            <div>
+                <label for="fileCatalogSize" class="@fields.Parameters.FileCatalogSizeClass">File catalog size<br />(total number of available files):</label>
+                <input id="fileCatalogSize" type="number" value="@fields.Parameters.FileCatalogSize"
+                       @onchange="fields.Parameters.OnFileCatalogSizeChanged" class="@fields.Parameters.FileCatalogSizeClass" />
+            </div>
+            <div>
+                <label for="fileCatalogTotalFileSize">Total file catalog size<br />(number of files * mean file size):</label>
+                <input id="fileCatalogTotalFileSize" readonly="readonly" value="@(fields.Parameters.TotalFileCatalogGigabyteSize.ToString("f4")) GB" />
+            </div>
+            <div>
+                <label for="fileCatalogSizePerNode" class="@fields.Parameters.FileCatalogGigabyteSizePerNodeClass">
+                    File catalog size per node<br />(catalog size / number of nodes):
+                </label>
+                <input id="fileCatalogSizePerNode" readonly="readonly" class="@fields.Parameters.FileCatalogGigabyteSizePerNodeClass"
+                       value="@(fields.Parameters.FileCatalogGigabyteSizePerNode.ToString("f4")) GB" />
+            </div>
+            <div>
+                <label for="filePopularityStandardDeviation" class="@fields.Parameters.FilePopularityStandardDeviationClass">File popularity<br />standard deviation:</label>
+                <input id="filePopularityStandardDeviation" type="number" value="@fields.Parameters.FilePopularityStandardDeviation"
+                       @onchange="fields.Parameters.OnFilePopularityStandardDeviationChanged" class="@fields.Parameters.FilePopularityStandardDeviationClass" />
+            </div>
+            <div>
+                <label for="maxSamplingAttempts" class="@fields.Parameters.MaxSamplingAttemptsClass">Max Sampling Attempts to ensure<br />files allocated (minimum of 1):</label>
+                <input id="maxSamplingAttempts" type="number" value="@fields.Parameters.MaxSamplingAttempts"
+                       @onchange="fields.Parameters.OnMaxSamplingAttemptsChanged" class="@fields.Parameters.MaxSamplingAttemptsClass" />
+            </div>
+            <div>
+                <label for="meanFilePopularity">Mean file popularity<br />(readonly: 1 / File catalog size):</label>
+                <input id="meanFilePopularity" value="@((1M / fields.Parameters.FileCatalogSize).ToString("f4"))" readonly="readonly" />
+            </div>
+            <div>
+                <label for="bandwidthEquation">
+                    Max bandwidth equation<br />over N hops (readonly)
+                    <sup><b><a href="#Reference1" onclick="event.stopPropagation()">1</a></b></sup>:
+                </label>
+                <input id="bandwidthEquation" value="1 / N" readonly="readonly" />
+            </div>
+        </div>
+        <br />
+        @{
+            var fieldErrors = fields.FieldsInError.Count > 0
+                ? "Please correct errors for field(s): " +
+                    string.Join(", ", fields.FieldsInError.Select(fieldInError => fieldInError.GetDescription()))
+                : "";
+        }
+        @if (fieldErrors != "")
+        {
+            <label for="runSimulation" class="error">@fieldErrors</label>
+        }
+        <button id="runSimulation" @onclick="OnRunSimulation" disabled="@(fieldErrors != "")">
             Run Simulation
         </button>
     </fieldset>
 }
+else
+{
+    <fieldset class="text-right">
+        <legend class="text-left">
+            Simulation Results Analysis
+        </legend>
+        <div class="fields">
+            <div>
+                <label for="totalTimeBuffering">Total time buffering<br />(higher is worse QoS):</label>
+                <input id="totalTimeBuffering" value="@(analysisTotalTimeBuffering.TotalMinutes.ToString("f2")) Minutes" readonly="readonly" />
+            </div>
+            <div>
+                <label for="meanBufferingTimePerNode">Mean time buffering per node<br />(higher is worse QoS):</label>
+                <input id="meanBufferingTimePerNode" value="@(analysisMeanBufferingTimePerNode.TotalMinutes.ToString("f2")) Minutes" readonly="readonly" />
+            </div>
+        </div>
+    </fieldset>
+}
 
 <svg xmlns="http://www.w3.org/2000/svg"
-     class="nodes" viewBox="0 0 100 100">
-    @for (var nodeIdx = 0; nodeIdx < circleCalc.Nodes; nodeIdx++)
+     class="nodes" viewBox="0 0 120 100">
+    @for (var nodeIdx = 0; nodeIdx < fields.Parameters.Nodes; nodeIdx++)
     {
-        <circle stroke="black" stroke-width="@(circleCalc.Radius / 5d)" fill="none" r="@(circleCalc.Radius)"
-                cx="@(Math.Cos((circleCalc.DegreesPerNode * nodeIdx) * (Math.PI / 180)) * 30 + 40)"
-                cy="@(Math.Sin((circleCalc.DegreesPerNode * nodeIdx) * (Math.PI / 180)) * 30 + 40)" />
+        <circle stroke="black" stroke-width="@(fields.CircleCalc.Radius / 5d)" fill="none" r="@(fields.CircleCalc.Radius)"
+                cx="@(Math.Cos((fields.CircleCalc.DegreesPerNode * nodeIdx) * (Math.PI / 180)) * 30 + 40)"
+                cy="@(Math.Sin((fields.CircleCalc.DegreesPerNode * nodeIdx) * (Math.PI / 180)) * 30 + 40)" />
     }
     @if (simEvents == null)
     {
-        <foreignObject x="25" y="400" width="450" height="70" transform="scale(0.2)">
+        <foreignObject x="25" y="400" width="550" height="70" transform="scale(0.2)">
             <div xmlns="http://www.w3.org/1999/xhtml" class="svg-text" id="eventText">
                 Simulation not yet started.
             </div>
         </foreignObject>
-        <rect x="5" y="80" width="90" height="15" stroke="red" stroke-width="0.5" fill="none" />
+        <rect x="5" y="80" width="110" height="15" stroke="red" stroke-width="0.5" fill="none" />
     }
     else
     {
-        <foreignObject x="25" y="450" width="350" height="30" transform="scale(0.2)">
+        <foreignObject x="25" y="450" width="450" height="30" transform="scale(0.2)">
             <table xmlns="http://www.w3.org/1999/xhtml" class="full-width">
                 <tbody>
                     <tr>
                         <td><button id="previousEvent">Previous Event</button></td>
                         <td class="text-center" id="currentEventNumber"></td>
-                        <td class="text-right"><button id="nextEvent">Next Event</button></td>
+                        <td><button id="nextEvent">Next Event</button></td>
                     </tr>
                 </tbody>
             </table>
         </foreignObject>
-        <foreignObject x="400" y="25" width="100" height="450" transform="scale(0.2)">
+        <foreignObject x="500" y="25" width="200" height="450" transform="scale(0.2)">
             <div xmlns="http://www.w3.org/1999/xhtml" class="svg-text" id="eventText"></div>
         </foreignObject>
-        <rect x="80" y="5" width="25" height="90" stroke="black" stroke-width="0.5" fill="none" />
+        <rect x="100" y="5" width="45" height="90" stroke="black" stroke-width="0.5" fill="none" />
     }
 </svg>
 
@@ -79,36 +194,74 @@ Authors: David Bruck (<a href="mailto:dbruck1@@fau.edu">dbruck1@@fau.edu</a>) an
 Original source: <a href="https://github.com/CDA6122/Project" target="_blank">https://github.com/CDA6122/Project</a>
 License: BSD 2-Clause License (<a href="https://opensource.org/licenses/BSD-2-Clause" target="_blank">https://opensource.org/licenses/BSD-2-Clause</a>)
 </pre>
+<h3>Bibliography</h3>
+<ol>
+    <li value="1" id="Reference1">
+        <p>“<cite>Solving the Wireless Mesh Multi-Hop Dilemma</cite>”. <a href="http://www.strixsystems.com/" target="_blank">http://www.strixsystems.com/</a>. 2015.</p>
+    </li>
+    <li value="2">
+        <p>
+            Musser, Joseph. Comment on “<cite>Binary search for IList&lt;T&gt; and IReadOnlyList&lt;T&gt;</cite>”. <i>GitHub</i>, 24 July 2017, 9:54PM EDT,
+            <a href="https://github.com/dotnet/corefx/issues/4697#issuecomment-317605600" target="_blank">
+                https://github.com/dotnet/corefx/issues/4697#issuecomment-317605600
+            </a>.
+        </p>
+    </li>
+    <li value="3">
+        <p>
+            Jones, Kevin. .NET Core System.Security.Cryptography.RandomNumberGenerator.GetInt32 (pull request #31243) source code.
+            <a href="https://github.com/dotnet/corefx/pull/31243" target="_blank">https://github.com/dotnet/corefx/pull/31243</a>.
+        </p>
+    </li>
+    <li value="4">
+        <p>
+            Albrecht, Conrad and Portman, Wills. Answer to “<cite>How to generate a cryptographically secure Double between 0 and 1?</cite>”. <i>Stack Exchange</i>, 18 May 2010, 4:50PM,
+            <a href="https://stackoverflow.com/questions/2854438/how-to-generate-a-cryptographically-secure-double-between-0-and-1#answer-2854635" target="_blank">
+                https://stackoverflow.com/questions/2854438/how-to-generate-a-cryptographically-secure-double-between-0-and-1#answer-2854635
+            </a>
+        </p>
+    </li>
+    <li value="5">
+        <p>
+            Hardy, Michael. Answer to “<cite>Ноw many equal circles can be placed around a circle?</cite>”. <i>Stack Exchange</i>, 14 January 2013, 4:33PM,
+            <a href="https://math.stackexchange.com/questions/278642/%D0%9D%D0%BEw-many-equal-circles-can-be-placed-around-a-circle#answer-278666" target="_blank">
+                https://math.stackexchange.com/questions/278642/%D0%9D%D0%BEw-many-equal-circles-can-be-placed-around-a-circle#answer-278666
+            </a>
+        </p>
+    </li>
+</ol>
 
 @code {
-    static readonly Regex LineTerminationRegex = new Regex("\\r\\n?|\\n", RegexOptions.Compiled | RegexOptions.Singleline);
-    readonly CircleCalculations circleCalc = new CircleCalculations(maxRadius: 5d, startingNodes: 6);
-    IReadOnlyList<(string name, long size)> simFiles;
-    IReadOnlyList<SimulationEventBase> simEvents;
-    int eventIdx = 0;
-    string nodesClass = "";
-    string nodesString { get => circleCalc.Nodes.ToString(); }
+    const double maxRadius = 5d;
 
-    void OnNodesChanged(ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value.ToString(), out var tempNodes)
-            && tempNodes > 3)
-        {
-            circleCalc.Nodes = tempNodes;
-            nodesClass = "";
-        }
-        else
-        {
-            nodesClass = "error";
-        }
-    }
+    static readonly Regex LineTerminationRegex = new Regex("\\r\\n?|\\n", RegexOptions.Compiled | RegexOptions.Singleline);
+    IReadOnlyList<double>? simFiles;
+    IReadOnlyList<SimulationEventBase>? simEvents;
+    int eventIdx = 0;
+    Fields fields = new Fields();
+    TimeSpan analysisTotalTimeBuffering;
+    TimeSpan analysisMeanBufferingTimePerNode;
 
     async Task OnRunSimulation()
     {
-        (simFiles, simEvents) = Simulation.Run();
+        if (fields.FieldsInError.Count > 0)
+        {
+            return;
+        }
+        (simFiles, simEvents) = Simulation.Run(fields.Parameters);
+        var analyzed = SimulationResultAnalysis.Analyse(fields.Parameters, simEvents);
+        if (analyzed == null)
+        {
+            await jsRuntime.InvokeVoidAsync("alert", "Error: analysis failed.\n\n" +
+                "Maybe there was a file/buffer completion event without a file request?");
+        }
+        else
+        {
+            (analysisTotalTimeBuffering, analysisMeanBufferingTimePerNode) = analyzed.Value;
+        }
         eventIdx = 0;
         await DisablePreviousEvent();
-        if (simEvents.Count <= 1)
+        if (simEvents?.Count <= 1)
         {
             await DisableNextEvent();
         }
@@ -116,19 +269,13 @@ License: BSD 2-Clause License (<a href="https://opensource.org/licenses/BSD-2-Cl
         await BindPreviousNextEventButtons();
     }
 
-    string GetCurrentEventNumber()
-    {
-        return $"Event {eventIdx + 1:#,##0} of {simEvents?.Count:#,##0}";
-    }
+    string GetCurrentEventNumber() => $"Event {eventIdx + 1:#,##0} of {simEvents?.Count:#,##0}";
 
-    MarkupString GetEventText()
-    {
-        return (MarkupString)string.Join(
-            "<br/>",
-            LineTerminationRegex
-                .Split(simEvents?[eventIdx]?.ToString())
-                .Select(HttpUtility.HtmlEncode));
-    }
+    MarkupString GetEventText() => (MarkupString)string.Join(
+        "<br/>",
+        LineTerminationRegex
+            .Split(simEvents?[eventIdx]?.ToString())
+            .Select(HttpUtility.HtmlEncode));
 
     #region JavaScript interop (BlazorServer currently has a bug modifying svg foreignObject children)
 
@@ -186,4 +333,19 @@ License: BSD 2-Clause License (<a href="https://opensource.org/licenses/BSD-2-Cl
     }
 
     #endregion JavaScript interop
+
+    private sealed class Fields
+    {
+        internal readonly IReadOnlyList<FieldError> FieldsInError;
+        internal readonly SimulationParameters Parameters;
+        internal readonly CircleCalculations CircleCalc;
+
+        internal Fields()
+        {
+            var writeableFieldsInError = new List<FieldError>();
+            FieldsInError = writeableFieldsInError.AsReadOnly();
+            Parameters = new SimulationParameters(writeableFieldsInError);
+            CircleCalc = new CircleCalculations(Parameters, maxRadius);
+        }
+    }
 }

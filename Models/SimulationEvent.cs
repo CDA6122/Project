@@ -14,10 +14,13 @@ namespace Project.Models
      * SimulationStart (time)
      * FileRequested(time, requesting node, file, connection node, bandwidth)
      * FullyBuffered (time, node, size streamed at time of fully buffered)
+     * BandwidthReallocated(time, node, bandwidth)
      * StreamingComplete (time, node)
-     * SimulationEnd (time)
      *
-     * ** TODO: support re-routing traffic mid-stream and adjusting bandwidth on complete streams
+     * // going to count time to fill partial buffer against quality service
+     * StreamingAborted (time, node, size of partial buffer)
+     * 
+     * SimulationEnd (time)
      */
 
     internal abstract class SimulationEventBase
@@ -27,6 +30,9 @@ namespace Project.Models
         {
             EventTime = eventTime;
         }
+
+        public override string ToString() => $@"Time (h:mm:ss.###):
+            {EventTime.TotalHours:0}{EventTime:\:mm\:ss\:fff}";
     }
 
     internal sealed class SimulationEventSimulationStart : SimulationEventBase
@@ -36,60 +42,80 @@ namespace Project.Models
         {
         }
 
-        public override string ToString()
-        {
-            return "Simulation started";
-        }
+        public override string ToString() => $@"{base.ToString()}
+
+            Simulation started";
     }
 
     internal sealed class SimulationEventFileRequested : SimulationEventBase
     {
         internal readonly int RequestingNode;
-        internal readonly string SimulationFile;
+        internal readonly int SimulationFile;
         internal readonly int ConnectionNode;
-        internal readonly decimal Bandwidth;
-        internal SimulationEventFileRequested(TimeSpan eventTime, int requestingNode, string simulationFile, int connectionNode, decimal bandwidth)
+        internal readonly bool? Clockwise;
+        internal readonly double Bandwidth;
+        internal SimulationEventFileRequested(TimeSpan eventTime, int requestingNode, int simulationFile,
+                int connectionNode, bool? clockwise, double bandwidth)
             : base(eventTime)
         {
             RequestingNode = requestingNode;
             SimulationFile = simulationFile;
             ConnectionNode = connectionNode;
+            Clockwise = clockwise;
             Bandwidth = bandwidth;
         }
 
-        public override string ToString()
-        {
-            return $@"File requested
-                Node {RequestingNode}
+        public override string ToString() => $@"{base.ToString()}
 
-                File:
-                {SimulationFile}
+            File requested
+            Node {RequestingNode}
 
-                Connection:
-                Node {ConnectionNode}
-                Bandwidth {Bandwidth / 1000000M:#,##0.##}mbps";
-        }
+            File {SimulationFile}
+
+            Connection:
+            Node {ConnectionNode}
+            {(Clockwise == null ? "(Local file)" : (Clockwise == true ? "Clockwise" : "Counter-clockwise"))}
+
+            Bandwidth {Bandwidth / 1024d / 1024d:#,##0.##}mbps";
     }
 
     internal sealed class SimulationEventFullyBuffered : SimulationEventBase
     {
         internal readonly int Node;
-        internal readonly long BytesStreamedAtTimeOfFullyBuffered;
-        internal SimulationEventFullyBuffered(TimeSpan eventTime, int node, long bytesStreamedAtTimeOfFullyBuffered)
+        internal readonly double MegabytesStreamedAtTimeOfFullyBuffered;
+        internal SimulationEventFullyBuffered(TimeSpan eventTime, int node, double megabytesStreamedAtTimeOfFullyBuffered)
             : base(eventTime)
         {
             Node = node;
-            BytesStreamedAtTimeOfFullyBuffered = bytesStreamedAtTimeOfFullyBuffered;
+            MegabytesStreamedAtTimeOfFullyBuffered = megabytesStreamedAtTimeOfFullyBuffered;
         }
 
-        public override string ToString()
+        public override string ToString() => $@"{base.ToString()}
+
+            File fully buffered
+            Node {Node}
+
+            File size downloaded so far:
+            {MegabytesStreamedAtTimeOfFullyBuffered:#,##0.##}MB";
+    }
+
+    internal sealed class SimulationEventBandwidthReallocated : SimulationEventBase
+    {
+        internal readonly int Node;
+        internal readonly double Bandwidth;
+        internal SimulationEventBandwidthReallocated(TimeSpan eventTime, int node, double bandwidth)
+            : base(eventTime)
         {
-            return $@"File fully buffered
-                Node {Node}
-
-                File size downloaded so far:
-                {BytesStreamedAtTimeOfFullyBuffered / 8000000M:#,##0.##}MB";
+            Node = node;
+            Bandwidth = bandwidth;
         }
+
+        public override string ToString() => $@"{base.ToString()}
+
+            File bandwidth reallocated
+            Node {Node}
+
+            Bandwidth {Bandwidth / 1024d / 1024d:#,##0.##}mbps";
     }
 
     internal sealed class SimulationEventStreamingComplete : SimulationEventBase
@@ -101,10 +127,30 @@ namespace Project.Models
             Node = node;
         }
 
-        public override string ToString()
+        public override string ToString() => $@"{base.ToString()}
+
+            File finished streaming on node {Node}";
+    }
+    internal sealed class SimulationEventStreamingAborted : SimulationEventBase
+    {
+        //StreamingAborted(time, node, size of partial buffer)
+        internal readonly int Node;
+        internal readonly double? PartialBufferMegabytesStreamed;
+        internal SimulationEventStreamingAborted(TimeSpan eventTime, int node, double? partialBufferMegabytesStreamed)
+            : base(eventTime)
         {
-            return $"File finished streaming on node {Node}";
+            Node = node;
+            PartialBufferMegabytesStreamed = partialBufferMegabytesStreamed;
         }
+
+        public override string ToString() => $@"{base.ToString()}
+
+            File streaming aborted
+            Node {Node}" + (PartialBufferMegabytesStreamed == null ? "" : $@"
+
+            Partial buffer discarded of
+            size downloaded so far:
+            {PartialBufferMegabytesStreamed:#,##0.##}MB");
     }
 
     internal sealed class SimulationEventSimulationEnd : SimulationEventBase
