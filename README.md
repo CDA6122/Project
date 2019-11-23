@@ -76,26 +76,26 @@ Open a new terminal and ensure the following executables can be found (can use �
 `git` (e.g. “`where git`” on Windows)
 `npm` (e.g. “`whereis dotnet`” on Linux)
 
-In the terminal, run the following command and ensure it lists at least the two lines starting 3.0.X and 2.2.X (X can be anything):
+In the terminal, run the following command and ensure it lists at least the two lines starting 3.0.X and 2.2.X (X can be anything):  
 `dotnet --list-sdks`
 
 In the terminal, change directory to the desired parent directory which will contain the Project subdirectory (containing the Project source code).
-Follow instructions from the GitHub CDA6122 Project page to Clone or download. For example, you can use the following terminal command:
+Follow instructions from the GitHub CDA6122 Project page to Clone or download. For example, you can use the following terminal command:  
 `git clone https://github.com/CDA6122/Project.git`
 
 ### First time instructions
 
 In the terminal, change directory to the Project subfolder.
-Run the following commands (omit the “sudo” command prefix if running on Windows; also, installing electron-builder seems to take a very long time so be patient):
-`dotnet tool install ElectronNET.CLI -g`
-`sudo npm install electron-builder --global`
+Run the following commands (omit the “sudo” command prefix if running on Windows; also, installing electron-builder seems to take a very long time so be patient):  
+`dotnet tool install ElectronNET.CLI -g`  
+`sudo npm install electron-builder --global`  
 
 **Note:** *You may have to restart the computer if terminal says `electronize` command not found when you try to run it*
 
 ### Then, to run it the first time and every time afterwards
 
 In the terminal, change directory to the Project subfolder
-Run the following command:
+Run the following command:  
 `electronize start` 
 
 
@@ -116,14 +116,14 @@ Open a new terminal, change directory to the Project subfolder, and run only the
 
 - Error: ‘`electron-builder update check failed`’
   Resolution: follow the instructions to ‘`get access to the local update config store`’
-- Error (if the exact path to directory `/Users/davidbruck/.npm/_cacache/index-v5` differs in the error message, change it in the resolution command as well):
+- Error (if the exact path to directory `/Users/davidbruck/.npm/_cacache/index-v5` differs in the error message, change it in the resolution command as well):  
 ```shell
   ⨯ npm exited with code ERR_ELECTRON_BUILDER_CANNOT_EXECUTE
 Error output:
 Error output:
 Unhandled rejection Error: EACCES: permission denied, mkdir '/Users/davidbruck/.npm/_cacache/index-v5/f9/55'
-```
-​       Resolution:
+```  
+​       Resolution:  
 ```shell
 sudo chmod -R g+w /Users/davidbruck/.npm/_cacache/index-v5
 ```
@@ -134,11 +134,11 @@ sudo chmod -R g+w /Users/davidbruck/.npm/_cacache/index-v5
 
 - Error: ‘`electron-builder update check failed`’
   Resolution: follow the instructions to ‘`get access to the local update config store`’
-- Error (if the exact path to directory `/usr/lib/node_modules/electron-builder/node_modules/app-builder-lib/templates/icons` differs in the error message, change it in the resolution command as well):
+- Error (if the exact path to directory `/usr/lib/node_modules/electron-builder/node_modules/app-builder-lib/templates/icons` differs in the error message, change it in the resolution command as well):  
 ```shell
   ⨯ chmod /usr/lib/node_modules/electron-builder/node_modules/app-builder-lib/templates/icons/electron-linux/256x256.png: operation not permitted
-```
-​       Resolution:
+```  
+​       Resolution:  
 ```shell
 sudo find /usr/lib/node_modules/electron-builder/node_modules/app-builder-lib/templates/icons -type d -user root -exec sudo chown -R $USER: {} +
 ```
