@@ -336,6 +336,7 @@ namespace Project.Models
                     return;
                 }
 
+                // Free up the bandwith used by the requesting node through the connection nodes
                 var connectionNodeIndexes = new HashSet<int>();
                 var nearestConnection = nodeIdx;
                 do
@@ -348,7 +349,18 @@ namespace Project.Models
                             ? parameters.Nodes - 1
                             : nearestConnection - 1);
 
-                    var connectionsThroughNode = connectionsThroughNodes[nearestConnection];
+                    freeUpBandwidth(nearestConnection);
+                }
+                while (nearestConnection != connectionNodeIdx);
+
+                // Free up bandwidth used by requesting node itself
+                freeUpBandwidth(nodeIdx);
+
+                reallocateBandwidth(@event, connectionNodeIndexes);
+
+                void freeUpBandwidth(int connection)
+                {
+                    var connectionsThroughNode = connectionsThroughNodes[connection];
                     connectionsThroughNode.Remove(nodeIdx);
 
                     foreach (var otherConnectionNodeIdx in connectionsThroughNode.Keys)
@@ -356,9 +368,6 @@ namespace Project.Models
                         connectionNodeIndexes.Add(otherConnectionNodeIdx);
                     }
                 }
-                while (nearestConnection != connectionNodeIdx);
-
-                reallocateBandwidth(@event, connectionNodeIndexes);
             }
 
             DateTime finishBuffering(DateTime @event, int nodeIdx, int fileIdx, int connectionNodeIdx,
@@ -544,8 +553,8 @@ namespace Project.Models
                     parameters.MeanFileSizeMegabytes /
                     (parameters.MeanFileSizeMegabytes - minFileSize), randomLow); // standardize to offset negative file sizes
 
-                // standardize to 100% total probability
-                randomLow += (unstandardizedFilePopularities[fileIdx] - minFilePopularity) / sumOfFilePopularities;
+                randomLow += (unstandardizedFilePopularities[fileIdx] - minFilePopularity) /
+                    sumOfFilePopularities; // standardize to 100% total probability
             }
 
             return Array.AsReadOnly(result);
@@ -556,16 +565,14 @@ namespace Project.Models
             FillNodeDisksByFilePopularity(IReadOnlyList<(double fileSizeMegabytes, double randomLow)> files,
                 RandomGenerator randomSource, SimulationParameters parameters)
         {
-            var writableNodes = new HashSet<int>[parameters.Nodes];
-            var nodes = new IReadOnlyHashSet<int>[parameters.Nodes];
+            var nodes = new HashSet<int>[parameters.Nodes];
             var nodesRemainingDiskSpaceGigabytes =
                 Enumerable.Repeat(parameters.NodeCapacityGigabytes, parameters.Nodes).ToList();
             for (int nodeIdx = 0; nodeIdx < parameters.Nodes; nodeIdx++)
             {
                 var diskSpaceMegabytes = parameters.NodeCapacityGigabytes * 1024d;
                 var nodeFiles = new HashSet<int>();
-                writableNodes[nodeIdx] = nodeFiles;
-                nodes[nodeIdx] = new ReadOnlyHashSet<int>(nodeFiles);
+                nodes[nodeIdx] = nodeFiles;
                 fillNodeDisk(files.Select((file, fileIdx) => (fileIdx, file.fileSizeMegabytes, file.randomLow)).ToList(),
                     nodeFiles, diskSpaceMegabytes);
             }
@@ -578,7 +585,7 @@ namespace Project.Models
 
             if (remainingFiles.Count == 0)
             {
-                return (Array.AsReadOnly(nodes), files);
+                return (getNodesReadonlyHashSetArray(), files);
             }
 
             // TODO: Better handling of special case where a file has not been randomly selected even once for any
@@ -587,7 +594,8 @@ namespace Project.Models
             //       distributions.
             //
             // Remove the unused files
-            var reducedFiles = new (double fileSizeMegabytes, double randomLow)[parameters.FileCatalogSize - remainingFiles.Count];
+            var reducedFiles = new (double fileSizeMegabytes, double randomLow)[
+                parameters.FileCatalogSize - remainingFiles.Count];
             var reducedFileCounter = 0;
             var sumOfRemainingPopularities = 0d;
             var removedFiles = new int[remainingFiles.Count];
@@ -601,24 +609,50 @@ namespace Project.Models
                 else
                 {
                     var reducedFile = files[fileIdx];
-                    reducedFiles[parameters.FileCatalogSize - remainingFiles.Count - ++reducedFileCounter] = reducedFile;
-                    sumOfRemainingPopularities += reducedFile.randomLow;
+                    var filePopularity = reducedFile.randomLow -
+                        (fileIdx == 0 ? 0d : files[fileIdx - 1].randomLow);
+                    reducedFiles[parameters.FileCatalogSize - remainingFiles.Count - ++reducedFileCounter] =
+                        (reducedFile.fileSizeMegabytes, filePopularity);
+                    sumOfRemainingPopularities += filePopularity;
                 }
             }
 
-            // File ordinals are used as their indexes, so have to apply deltas to the node file lists for the removed indexes
+            // File ordinals are used as their indexes,
+            // so have to apply deltas to the node file lists for the removed indexes
             for (int nodeIdx = 0; nodeIdx < parameters.Nodes; nodeIdx++)
             {
-                var writableNode = writableNodes[nodeIdx];
-                foreach (var fileIdx in writableNode.ToList())
+                var oldWritableNode = nodes[nodeIdx];
+                var newWritableNode = new HashSet<int>();
+                foreach (var fileIdx in oldWritableNode)
                 {
-                    writableNode.Remove(fileIdx);
-                    writableNode.Add(fileIdx - ~Array.BinarySearch(removedFiles, fileIdx));
+                    newWritableNode.Add(fileIdx - ~Array.BinarySearch(removedFiles, fileIdx));
                 }
+
+                nodes[nodeIdx] = newWritableNode;
             }
 
-            return (Array.AsReadOnly(nodes), reducedFiles.Select(reducedFile => (reducedFile.fileSizeMegabytes,
-                reducedFile.randomLow / sumOfRemainingPopularities)).ToList().AsReadOnly()); // Normalize to total probability of 100%
+            var randomLow = 0d;
+            for (var reducedFileIdx = 0; reducedFileIdx < reducedFiles.Length; reducedFileIdx++)
+            {
+                var reducedFile = reducedFiles[reducedFileIdx];
+
+                reducedFiles[reducedFileIdx] = (reducedFile.fileSizeMegabytes, randomLow);
+
+                // Normalize to total probability of 100%
+                randomLow += reducedFile.randomLow / sumOfRemainingPopularities;
+            }
+
+            return (getNodesReadonlyHashSetArray(), Array.AsReadOnly(reducedFiles));
+
+            IReadOnlyList<IReadOnlyHashSet<int>> getNodesReadonlyHashSetArray()
+            {
+                var readonlyNodes = new IReadOnlyHashSet<int>[nodes.Length];
+                for (var nodeIdx = 0; nodeIdx < nodes.Length; nodeIdx++)
+                {
+                    readonlyNodes[nodeIdx] = new ReadOnlyHashSet<int>(nodes[nodeIdx]);
+                }
+                return Array.AsReadOnly(readonlyNodes);
+            }
 
             void fillNodeDisk(IReadOnlyList<(int fileIdx, double fileSizeMegabytes, double randomLow)> remainingFiles,
                 HashSet<int> nodeFiles, double diskSpaceMegabytes)

@@ -84,7 +84,7 @@
                        @onchange="fields.Parameters.OnFileCatalogSizeChanged" class="@fields.Parameters.FileCatalogSizeClass" disabled="@simulationRunning" />
             </div>
             <div>
-                <label for="fileCatalogTotalFileSize">Total file catalog size<br />(number of files * mean file size):</label>
+                <label for="fileCatalogTotalFileSize">Total file catalog size<br />(number of files &times; mean file size):</label>
                 <input id="fileCatalogTotalFileSize" readonly="readonly" value="@(fields.Parameters.TotalFileCatalogGigabyteSize.ToString("f4")) GB" disabled="@simulationRunning" />
             </div>
             <div>
