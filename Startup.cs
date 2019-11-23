@@ -52,6 +52,8 @@ namespace Project
 
             Task.Run(async () => {
                 var browserWindow = await Electron.WindowManager.CreateWindowAsync();
+                const string title = "CDA6122 Project by David Bruck and Freguens Mildort";
+                browserWindow.SetTitle(title);
                 await Electron.HostHook.CallAsync<object>("handle-new-window");
             });
         }

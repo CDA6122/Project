@@ -18,6 +18,10 @@
         return true;
     }
 
+    function setEventTextRunning(val) {
+        document.getElementById('eventTextRunning').innerHTML = val;
+    }
+
     function disablePreviousEvent() {
         if (!previousEvent && !getElements(disablePreviousEvent)) {
             return;
@@ -69,6 +73,7 @@
     }
 
     // exports:
+    window.setEventTextRunning = setEventTextRunning;
     window.disablePreviousEvent = disablePreviousEvent;
     window.enablePreviousEvent = enablePreviousEvent;
     window.disableNextEvent = disableNextEvent;

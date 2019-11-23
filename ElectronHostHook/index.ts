@@ -13,12 +13,20 @@ export class HookService extends Connector {
     }
 
     onHostReady(): void {
+        this.on("handle-page-title-updated", async (done) => {
+            for (const webContents of Electron.webContents.getAllWebContents()) {
+                webContents.on("page-title-updated", (event) => {
+                    event.preventDefault();
+                });
+            }
+            done();
+        })
         this.on("handle-new-window", async(done) => {
             for (const webContents of Electron.webContents.getAllWebContents()) {
                 webContents.on("new-window", (event, url) => {
                     event.preventDefault();
                     Electron.shell.openExternal(url);
-                });
+                }); 
             }
             done();
         })
