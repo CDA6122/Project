@@ -94,7 +94,8 @@ namespace Project.Models
         public override void NextBytes(byte[] buffer) => randomProvider.GetBytes(buffer);
         public override void NextBytes(Span<byte> buffer) => randomProvider.GetBytes(buffer);
 
-        // Bibliography reference 4 in Index.razor (main page). Adapted from answer by Conrad Albrecht and edit by Portman Wills to:
+        // Bibliography reference 4 in Index.razor (main page). Adapted from answer by Conrad Albrecht and edit by
+        // Portman Wills to:
         // https://stackoverflow.com/questions/2854438/how-to-generate-a-cryptographically-secure-double-between-0-and-1#answer-2854635
         // Adapted for Project
         public override double NextDouble()

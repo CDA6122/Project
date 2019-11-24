@@ -16,7 +16,7 @@ namespace Project.Models
         // Parameters initialized with starting values:
         private int _nodes = 6;
         private double _simulationLengthMinutes = 600d;
-        private double _expectedFilesPerNode = 60d; // ~1 new file every 10 minutes
+        private double _filesPerNode = 60d; // ~1 new file every 600 minutes / 60 = 10 minutes
         private double _meanFileSizeMegabytes = 357.628d; // ~10 minutes at 5,000,000 bitrate
         private double _fileSizeMegabytesStandardDeviation = 150d;
         private double _playbackBitrate = 5_000_000d;
@@ -29,10 +29,11 @@ namespace Project.Models
 
         private double _filePopularityStandardDeviation = 0.004d;
         private int _maxSamplingAttempts = 100;
+        private int _simulationRuns = 1;
 
         internal int Nodes { get => _nodes; }
         internal double SimulationLengthMinutes { get => _simulationLengthMinutes; }
-        internal double ExpectedFilesPerNode { get => _expectedFilesPerNode; }
+        internal double FilesPerNode { get => _filesPerNode; }
         internal double MeanFileSizeMegabytes { get => _meanFileSizeMegabytes; }
         internal double FileSizeMegabytesStandardDeviation { get => _fileSizeMegabytesStandardDeviation; }
         internal double PlaybackBitrate { get => _playbackBitrate; }
@@ -43,6 +44,7 @@ namespace Project.Models
         internal double MaxSamplingAttempts { get => _maxSamplingAttempts; }
         internal double TotalFileCatalogGigabyteSize { get => _fileCatalogSize * _meanFileSizeMegabytes / 1024d; }
         internal double FileCatalogGigabyteSizePerNode { get => TotalFileCatalogGigabyteSize / _nodes; }
+        internal int SimulationRuns { get => _simulationRuns;  }
 
         private readonly List<FieldError> fieldsInError;
         internal SimulationParameters(List<FieldError> fieldsInError) => this.fieldsInError = fieldsInError;
@@ -65,16 +67,15 @@ namespace Project.Models
         internal string SimulationLengthMinutesClass { get => _simulationLengthMinutesClass; }
         private string _simulationLengthMinutesClass = "";
 
-        internal void OnExpectedFilesPerNodeChanged(ChangeEventArgs e) =>
-            OnParameterChanged(e, FieldError.ExpectedFilesPerNode, ref _expectedFilesPerNode, ref _expectedFilesPerNodeClass,
-                double.TryParse);
-        internal string ExpectedFilesPerNodeClass { get => _expectedFilesPerNodeClass; }
-        private string _expectedFilesPerNodeClass = "";
+        internal void OnFilesPerNodeChanged(ChangeEventArgs e) =>
+            OnParameterChanged(e, FieldError.FilesPerNode, ref _filesPerNode, ref _filesPerNodeClass, double.TryParse);
+        internal string FilesPerNodeClass { get => _filesPerNodeClass; }
+        private string _filesPerNodeClass = "";
 
         internal void OnMeanFileSizeMegabytesChanged(ChangeEventArgs e)
         {
-            if (OnParameterChanged(e, FieldError.MeanFileSize, ref _meanFileSizeMegabytes, ref _meanFileSizeMegabytesClass,
-                double.TryParse))
+            if (OnParameterChanged(e, FieldError.MeanFileSize, ref _meanFileSizeMegabytes,
+                ref _meanFileSizeMegabytesClass, double.TryParse))
             {
                 FileCatalogGigabyteSizePerNodeChanged();
             }
@@ -96,8 +97,8 @@ namespace Project.Models
 
         internal void OnNodeCapacityGigabytesChanged(ChangeEventArgs e)
         {
-            if (OnParameterChanged(e, FieldError.NodeCapacity, ref _nodeCapacityGigabytes, ref _nodeCapacityGigabytesClass,
-                double.TryParse))
+            if (OnParameterChanged(e, FieldError.NodeCapacity, ref _nodeCapacityGigabytes,
+                ref _nodeCapacityGigabytesClass, double.TryParse))
             {
                 FileCatalogGigabyteSizePerNodeChanged();
             }
@@ -138,20 +139,25 @@ namespace Project.Models
         {
             if (FileCatalogGigabyteSizePerNode < _nodeCapacityGigabytes)
             {
-                if (_fileCatalogGigabyteSizePerNodeClass != "")
+                if (FileCatalogGigabyteSizePerNodeClass != "")
                 {
-                    _fileCatalogGigabyteSizePerNodeClass = "";
+                    FileCatalogGigabyteSizePerNodeClass = "";
                     fieldsInError.Remove(FieldError.FileCatalogGigabyteSizePerNode);
                 }
             }
-            else if (_fileCatalogGigabyteSizePerNodeClass == "")
+            else if (FileCatalogGigabyteSizePerNodeClass == "")
             {
-                _fileCatalogGigabyteSizePerNodeClass = "error";
+                FileCatalogGigabyteSizePerNodeClass = "error";
                 fieldsInError.Add(FieldError.FileCatalogGigabyteSizePerNode);
             }
         }
-        internal string FileCatalogGigabyteSizePerNodeClass { get => _fileCatalogGigabyteSizePerNodeClass; }
-        private string _fileCatalogGigabyteSizePerNodeClass = "";
+        internal string FileCatalogGigabyteSizePerNodeClass { get; private set; } = "";
+
+        internal void OnSimulationRunsChanged(ChangeEventArgs e) =>
+            OnParameterChanged(e, FieldError.SimulationRuns, ref _simulationRuns, ref _simulationRunsClass,
+                int.TryParse);
+        internal string SimulationRunsClass { get => _simulationRunsClass; }
+        private string _simulationRunsClass = "";
 
         private bool OnParameterChanged<T>(ChangeEventArgs e, FieldError field, ref T value, ref string @class,
             TryParse<T> tryParse, T belowMinValue = default)

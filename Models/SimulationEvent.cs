@@ -83,7 +83,8 @@ namespace Project.Models
     {
         internal readonly int Node;
         internal readonly double MegabytesStreamedAtTimeOfFullyBuffered;
-        internal SimulationEventFullyBuffered(TimeSpan eventTime, int node, double megabytesStreamedAtTimeOfFullyBuffered)
+        internal SimulationEventFullyBuffered(TimeSpan eventTime, int node,
+            double megabytesStreamedAtTimeOfFullyBuffered)
             : base(eventTime)
         {
             Node = node;

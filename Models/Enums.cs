@@ -15,7 +15,7 @@ namespace Project.Models
     {
         [Description("Number of nodes")] Nodes,
         [Description("Simulation length")] SimulationLength,
-        [Description("Expected number of files per node")] ExpectedFilesPerNode,
+        [Description("Number of files per node")] FilesPerNode,
         [Description("Mean file size")] MeanFileSize,
         [Description("File size standard deviation")] FileSizeStandardDeviation,
         [Description("Playback constant bitrate")] PlaybackBitrate,
@@ -24,6 +24,7 @@ namespace Project.Models
         [Description("File catalog size")] FileCatalogSize,
         [Description("File popularity standard deviation")] FilePopularityStandardDeviation,
         [Description("Max sampling attempts")] MaxSamplingAttempts,
-        [Description("File catalog size per node must not exceed storage capacity")] FileCatalogGigabyteSizePerNode
+        [Description("File catalog size per node must not exceed storage capacity")] FileCatalogGigabyteSizePerNode,
+        [Description("How many times to run the simulation")] SimulationRuns
     }
 }

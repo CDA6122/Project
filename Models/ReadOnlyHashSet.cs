@@ -46,8 +46,10 @@ namespace Project.Models
         public bool Overlaps(IEnumerable<T> other) => set.Overlaps(other);
         bool ICollection<T>.Remove(T item) => throw new NotSupportedException(ErrorCollectionIsReadOnly);
         public bool SetEquals(IEnumerable<T> other) => set.SetEquals(other);
-        void ISet<T>.SymmetricExceptWith(IEnumerable<T> other) => throw new NotSupportedException(ErrorCollectionIsReadOnly);
-        public bool TryGetValue(T equalValue, [MaybeNullWhen(false)] out T actualValue) => set.TryGetValue(equalValue, out actualValue);
+        void ISet<T>.SymmetricExceptWith(IEnumerable<T> other) =>
+            throw new NotSupportedException(ErrorCollectionIsReadOnly);
+        public bool TryGetValue(T equalValue, [MaybeNullWhen(false)] out T actualValue) =>
+            set.TryGetValue(equalValue, out actualValue);
         public void UnionWith(IEnumerable<T> other) => set.UnionWith(other);
         void ICollection<T>.Add(T item) => throw new NotSupportedException(ErrorCollectionIsReadOnly);
         IEnumerator IEnumerable.GetEnumerator() => set.GetEnumerator();

@@ -42,8 +42,7 @@ namespace Project.Models
             } while (sampleFiles.Count < parameters.FileCatalogSize
                 && ++samplingAttemptCounter <= parameters.MaxSamplingAttempts);
 
-            var averageMinuteBetweenEventsPerNode = parameters.SimulationLengthMinutes /
-                parameters.ExpectedFilesPerNode;
+            var averageMinuteBetweenEventsPerNode = parameters.SimulationLengthMinutes / parameters.FilesPerNode;
 
             // The class MathNet.Numerics.Distributions.Poisson only gives discrete whole minute samples (integer)
             //
@@ -54,7 +53,8 @@ namespace Project.Models
                 Math.Sqrt(averageMinuteBetweenEventsPerNode), randomSource);
 
             var eventEndTimespan = DateTime.MinValue.AddMinutes(parameters.SimulationLengthMinutes);
-            var eventsPerNodeInChronologicalOrder = new SortedDictionary<DateTime, (bool, int)>();
+            var eventsPerNodeInChronologicalOrder =
+                new SortedDictionary<DateTime, (bool newFileRequest, int nodeIdx)>();
             var connectionsThroughNodes = new Dictionary<int, double>[parameters.Nodes];
             for (var nodeIdx = 0; nodeIdx < parameters.Nodes; nodeIdx++)
             {
@@ -80,7 +80,7 @@ namespace Project.Models
                         // New file requested before previous one completed (also cleans up and reallocates bandwidth)
 
                         finishStreaming(@event.Key, @event.Value.nodeIdx, connectionNodeIdx, clockwise,
-                            abortBuffer: bufferedMegabytes);
+                            abortData: (bufferedMegabytes, nextEvent));
                     }
                     else
                     {
@@ -88,8 +88,7 @@ namespace Project.Models
                         {
                             // Cleanup on finish (which also reallocates bandwidth)
 
-                            finishStreaming(@event.Key, @event.Value.nodeIdx, connectionNodeIdx, clockwise,
-                                abortBuffer: null);
+                            finishStreaming(@event.Key, @event.Value.nodeIdx, connectionNodeIdx, clockwise);
                         }
                         else
                         {
@@ -129,7 +128,8 @@ namespace Project.Models
 
             events.Add(new SimulationEventSimulationEnd(TimeSpan.FromMinutes(parameters.SimulationLengthMinutes)));
 
-            return new SimulationResult(sampleFiles.Select(sampleFile => sampleFile.fileSizeMegabytes).ToList(), events);
+            return new SimulationResult(sampleFiles.Select(sampleFile => sampleFile.fileSizeMegabytes).ToList(),
+                events);
 
             #region simulation event helpers
             void calculateNextFileRequestEvent(DateTime eventTimer, int nodeIdx)
@@ -150,7 +150,8 @@ namespace Project.Models
                 eventsPerNodeInChronologicalOrder.Add(nextNodeEvent, (true, nodeIdx));
             }
 
-            (int connectionNodeIdx, bool clockwise, double bandwidthBitsPerSecond) routeToFile(int nodeIdx, int fileIdx)
+            (int connectionNodeIdx, bool clockwise, double bandwidthBitsPerSecond)
+                routeToFile(int nodeIdx, int fileIdx)
             {
                 if (nodes[nodeIdx].Contains(fileIdx))
                 {
@@ -212,15 +213,16 @@ namespace Project.Models
 
                 // Bandwidth over N hops degrades by 1 / N according to Strix Systems.
                 // Bibliography reference 1 in Index.razor (main page)
-                var bandwidthBitsPerSecondAvailableCounterClockwise = parameters.MaxBandwidthMegabitsPerSecond * 1024 * 1024 *
-                    lowestPercentageBandwidthAvailableCounterClockwise / numberOfHopsCounterClockwise;
+                var bandwidthBitsPerSecondAvailableCounterClockwise = parameters.MaxBandwidthMegabitsPerSecond * 1024 *
+                    1024 * lowestPercentageBandwidthAvailableCounterClockwise / numberOfHopsCounterClockwise;
 
                 if (bandwidthBitsPerSecondAvailableCounterClockwise < 0)
                 {
                     bandwidthBitsPerSecondAvailableCounterClockwise = 0d; // Handle floating point errors
                 }
 
-                bool clockwise = bandwidthBitsPerSecondAvailableClockwise > bandwidthBitsPerSecondAvailableCounterClockwise;
+                bool clockwise = bandwidthBitsPerSecondAvailableClockwise >
+                    bandwidthBitsPerSecondAvailableCounterClockwise;
                 double bandwidthBitsPerSecondAvailable = Math.Min(parameters.PlaybackBitrate, clockwise
                     ? bandwidthBitsPerSecondAvailableClockwise
                     : bandwidthBitsPerSecondAvailableCounterClockwise);
@@ -257,7 +259,8 @@ namespace Project.Models
 
                 var (fileSizeMegabytes, randomLow) = sampleFiles[randomLowIndex];
 
-                var (newConnectionNodeIdx, clockwise, newBandwidthBitsPerSecond) = routeToFile(nodeIdx, randomLowIndex);
+                var (newConnectionNodeIdx, clockwise, newBandwidthBitsPerSecond) =
+                    routeToFile(nodeIdx, randomLowIndex);
 
                 TimeSpan eventTime = @event - DateTime.MinValue;
                 events.Add(new SimulationEventFileRequested(eventTime, nodeIdx, randomLowIndex, newConnectionNodeIdx,
@@ -315,17 +318,19 @@ namespace Project.Models
             }
 
             void finishStreaming(DateTime @event, int nodeIdx, int connectionNodeIdx, bool clockwise,
-                double? abortBuffer)
+                (double abortBuffer, DateTime nextEvent)? abortData = null)
             {
                 var eventTime = @event - DateTime.MinValue;
-                if (abortBuffer == null)
+                if (abortData is (double abortBuffer, DateTime nextEvent))
                 {
-                    events.Add(new SimulationEventStreamingComplete(eventTime, nodeIdx));
+                    events.Add(new SimulationEventStreamingAborted(eventTime, nodeIdx,
+                        double.IsNaN(abortBuffer) ? (double?)null : abortBuffer));
+
+                    eventsPerNodeInChronologicalOrder.Remove(nextEvent);
                 }
                 else
                 {
-                    events.Add(new SimulationEventStreamingAborted(eventTime, nodeIdx,
-                        double.IsNaN((double)abortBuffer) ? null : abortBuffer));
+                    events.Add(new SimulationEventStreamingComplete(eventTime, nodeIdx));
                 }
 
                 nodesData[nodeIdx] = null;
@@ -491,7 +496,7 @@ namespace Project.Models
                         while (eventsPerNodeInChronologicalOrder.ContainsKey(nextScheduledEvent))
                         {
                             // Two events could compete for exact same timeslot so we just add a tick to the time
-                            nextScheduledEvent = (nextScheduledEvent).AddTicks(1L);
+                            nextScheduledEvent = nextScheduledEvent.AddTicks(1L);
                         }
                         eventsPerNodeInChronologicalOrder.Add(nextScheduledEvent,
                             (false, (int)nodeWithLowestBandwidth));
@@ -551,7 +556,9 @@ namespace Project.Models
             {
                 result[fileIdx] = ((fileSizesMegabytes[fileIdx] - minFileSize) *
                     parameters.MeanFileSizeMegabytes /
-                    (parameters.MeanFileSizeMegabytes - minFileSize), randomLow); // standardize to offset negative file sizes
+
+                    // standardize to offset negative file sizes
+                    (parameters.MeanFileSizeMegabytes - minFileSize), randomLow);
 
                 randomLow += (unstandardizedFilePopularities[fileIdx] - minFilePopularity) /
                     sumOfFilePopularities; // standardize to 100% total probability
@@ -573,7 +580,8 @@ namespace Project.Models
                 var diskSpaceMegabytes = parameters.NodeCapacityGigabytes * 1024d;
                 var nodeFiles = new HashSet<int>();
                 nodes[nodeIdx] = nodeFiles;
-                fillNodeDisk(files.Select((file, fileIdx) => (fileIdx, file.fileSizeMegabytes, file.randomLow)).ToList(),
+                fillNodeDisk(files.Select((file, fileIdx) =>
+                    (fileIdx, file.fileSizeMegabytes, file.randomLow)).ToList(),
                     nodeFiles, diskSpaceMegabytes);
             }
 
@@ -688,7 +696,8 @@ namespace Project.Models
                         // also, might as well filter out too-large files
                         || (nodeFiles.Contains(fileIdx) && ++duplicateCounter >= maxDuplicatesBeforeClean))
                     {
-                        fillNodeDisk(filterSmallerFilesAndDuplicatesRecurse(), nodeFiles, diskSpaceMegabytes); // Recurse
+                        // Recurse
+                        fillNodeDisk(filterSmallerFilesAndDuplicatesRecurse(), nodeFiles, diskSpaceMegabytes);
                         return;
                     }
                     else
@@ -698,14 +707,17 @@ namespace Project.Models
                     }
                 }
 
-                IReadOnlyList<(int fileIdx, double fileSize, double randomLow)> filterSmallerFilesAndDuplicatesRecurse()
+                IReadOnlyList<(int fileIdx, double fileSize, double randomLow)>
+                    filterSmallerFilesAndDuplicatesRecurse()
                 {
-                    var smallerFiles = new List<(int fileIdx, double fileSizeMegabytes, double unstandardizedFilePopularity)>();
+                    var smallerFiles =
+                        new List<(int fileIdx, double fileSizeMegabytes, double unstandardizedFilePopularity)>();
                     var sumOfSmallerFilePopularities = 0d;
                     for (var remainingFileIdx = 0; remainingFileIdx < remainingFiles.Count; remainingFileIdx++)
                     {
                         var remainingFile = remainingFiles[remainingFileIdx];
-                        if (!nodeFiles.Contains(remainingFile.fileIdx) && remainingFile.fileSizeMegabytes <= diskSpaceMegabytes)
+                        if (!nodeFiles.Contains(remainingFile.fileIdx)
+                            && remainingFile.fileSizeMegabytes <= diskSpaceMegabytes)
                         {
                             var unstandardizedFilePopularity = (remainingFileIdx == remainingFiles.Count - 1
                                     ? 1d // For last file, popularity is 1 - current random low
@@ -714,7 +726,8 @@ namespace Project.Models
                                     : remainingFiles[remainingFileIdx + 1].randomLow) -
                                 remainingFile.randomLow;
                             sumOfSmallerFilePopularities += unstandardizedFilePopularity;
-                            smallerFiles.Add((remainingFile.fileIdx, remainingFile.fileSizeMegabytes, unstandardizedFilePopularity));
+                            smallerFiles.Add((remainingFile.fileIdx, remainingFile.fileSizeMegabytes,
+                                unstandardizedFilePopularity));
                         }
                     }
 

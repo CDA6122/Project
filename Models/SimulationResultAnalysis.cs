@@ -12,10 +12,10 @@ namespace Project.Models
 {
     internal static class SimulationResultAnalysis
     {
-        internal static (TimeSpan totalTimeBuffering, TimeSpan meanBufferingTimePerNode)?
+        internal static (TimeSpan meanBufferingTimePerNode, TimeSpan bufferingTimeStandardDeviation)
             Analyse(SimulationParameters parameters, IReadOnlyList<SimulationEventBase> events)
         {
-            var totalTimeBuffering = TimeSpan.Zero;
+            var timeBufferingPerNode = new TimeSpan[parameters.Nodes];
             var requestedFiles = new TimeSpan?[parameters.Nodes];
             foreach (var @event in events)
             {
@@ -29,7 +29,7 @@ namespace Project.Models
                         var beforeBuffered = requestedFiles[buffered.Node];
                         if (beforeBuffered != null)
                         {
-                            totalTimeBuffering += buffered.EventTime - ((TimeSpan)beforeBuffered);
+                            timeBufferingPerNode[buffered.Node] += buffered.EventTime - ((TimeSpan)beforeBuffered);
                             requestedFiles[buffered.Node] = null;
                         }
                         break;
@@ -38,24 +38,40 @@ namespace Project.Models
                         var beforeAborted = requestedFiles[aborted.Node];
                         if (beforeAborted != null)
                         {
-                            totalTimeBuffering += aborted.EventTime - ((TimeSpan)beforeAborted);
+                            timeBufferingPerNode[aborted.Node] += aborted.EventTime - ((TimeSpan)beforeAborted);
                             requestedFiles[aborted.Node] = null;
                         }
                         break;
 
                     case SimulationEventSimulationEnd ended:
-                        foreach (var endingBuffer in requestedFiles)
+                        for (var nodeIdx = 0; nodeIdx < parameters.Nodes; nodeIdx++)
                         {
+                            var endingBuffer = requestedFiles[nodeIdx];
                             if (endingBuffer != null)
                             {
-                                totalTimeBuffering += ended.EventTime - ((TimeSpan)endingBuffer);
+                                timeBufferingPerNode[nodeIdx] += ended.EventTime - ((TimeSpan)endingBuffer);
                             }
                         }
                         break;
                 }
             }
 
-            return (totalTimeBuffering, totalTimeBuffering / parameters.Nodes);
+            var averageTimeBuffering = timeBufferingPerNode.Aggregate(TimeSpan.Zero,
+                (accumulatedBufferingTime, nodeBufferingTime) => accumulatedBufferingTime + nodeBufferingTime) /
+                parameters.Nodes;
+            var sumOfSquaredTimeBufferingDifferences = timeBufferingPerNode
+                .Aggregate(TimeSpan.Zero,
+                    (accumulatedSquaredBufferingTimeDifferences, nodeBufferingTime) =>
+                    {
+                        var bufferingTimeDifferenceSeconds = (nodeBufferingTime > averageTimeBuffering
+                            ? nodeBufferingTime - averageTimeBuffering
+                            : averageTimeBuffering - nodeBufferingTime).TotalSeconds;
+                        return accumulatedSquaredBufferingTimeDifferences +
+                            TimeSpan.FromSeconds(bufferingTimeDifferenceSeconds * bufferingTimeDifferenceSeconds);
+                    });
+            return (averageTimeBuffering,
+                TimeSpan.FromSeconds((long)Math.Sqrt(sumOfSquaredTimeBufferingDifferences.TotalSeconds /
+                    parameters.Nodes)));
         }
     }
 }

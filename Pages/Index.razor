@@ -8,6 +8,7 @@
 @using Project.Extensions;
 @using Project.Models
 @using System.Text.RegularExpressions
+@using System.Numerics
 @using System.Web
 <table class="header">
     <tbody>
@@ -33,87 +34,148 @@
             <div>
                 <label for="nodes" class="@fields.Parameters.NodesClass">Number of nodes<br />(minimum of 3):</label>
                 <input id="nodes" type="number" value="@fields.Parameters.Nodes"
-                       @onchange="fields.CircleCalc.OnNodesChanged" class="@fields.Parameters.NodesClass" disabled="@simulationRunning" />
+                       @onchange="fields.CircleCalc.OnNodesChanged" class="@fields.Parameters.NodesClass"
+                       disabled="@(simulationRunCounter != null)" />
             </div>
             <div>
-                <label for="simulationLengthMinutes" class="@fields.Parameters.SimulationLengthMinutesClass">Simulation length<br />(minutes):</label>
+                <label for="simulationLengthMinutes" class="@fields.Parameters.SimulationLengthMinutesClass">
+                    Simulation length<br />(minutes):
+                </label>
                 <input id="simulationLengthMinutes" type="number" value="@fields.Parameters.SimulationLengthMinutes"
-                       @onchange="fields.Parameters.OnSimulationLengthMinutesChanged" class="@fields.Parameters.SimulationLengthMinutesClass" disabled="@simulationRunning" />
+                       @onchange="fields.Parameters.OnSimulationLengthMinutesChanged"
+                       class="@fields.Parameters.SimulationLengthMinutesClass"
+                       disabled="@(simulationRunCounter != null)" />
             </div>
             <div>
-                <label for="expectedFilesPerNode" class="@fields.Parameters.ExpectedFilesPerNodeClass">Expected number of files<br />requested per node (λ):</label>
-                <input id="expectedFilesPerNode" type="number" value="@fields.Parameters.ExpectedFilesPerNode"
-                       @onchange="fields.Parameters.OnExpectedFilesPerNodeChanged" class="@fields.Parameters.ExpectedFilesPerNodeClass" disabled="@simulationRunning" />
+                @{
+                    var lambdaFileRequestFrequency = fields.Parameters.SimulationLengthMinutes /
+                        fields.Parameters.FilesPerNode;
+                }
+                <label for="filesPerNode" class="@fields.Parameters.FilesPerNodeClass">
+                    Number of files requested<br />per node (λ = @(lambdaFileRequestFrequency.ToString("#,##0.00"))
+                    minutes):
+                </label>
+                <input id="filesPerNode" type="number" value="@fields.Parameters.FilesPerNode"
+                       @onchange="fields.Parameters.OnFilesPerNodeChanged"
+                       class="@fields.Parameters.FilesPerNodeClass" disabled="@(simulationRunCounter != null)" />
             </div>
             <div>
+                @{
+                    var meanFileSizeMegabytes = fields.Parameters.MeanFileSizeMegabytes * 1024 * 1024 * 8 /
+                        fields.Parameters.PlaybackBitrate / 60;
+                }
                 <label for="meanFileSizeMegabytes" class="@fields.Parameters.MeanFileSizeMegabytesClass">
                     Mean file size in 1024<sup>2</sup> bytes<br />(μ in MB) =
-                    @((fields.Parameters.MeanFileSizeMegabytes * 1024 * 1024 * 8 / fields.Parameters.PlaybackBitrate / 60).ToString("#,##0.00")) minutes:
+                    @(meanFileSizeMegabytes.ToString("#,##0.00")) minutes:
                 </label>
                 <input id="meanFileSizeMegabytes" type="number" value="@fields.Parameters.MeanFileSizeMegabytes"
-                       @onchange="fields.Parameters.OnMeanFileSizeMegabytesChanged" class="@fields.Parameters.MeanFileSizeMegabytesClass" disabled="@simulationRunning" />
+                       @onchange="fields.Parameters.OnMeanFileSizeMegabytesChanged"
+                       class="@fields.Parameters.MeanFileSizeMegabytesClass"
+                       disabled="@(simulationRunCounter != null)" />
             </div>
             <div>
-                <label for="fileSizeMegabytesStandardDeviation" class="@fields.Parameters.FileSizeMegabytesStandardDeviationClass">
+                <label for="fileSizeMegabytesStandardDeviation"
+                       class="@fields.Parameters.FileSizeMegabytesStandardDeviationClass">
                     File size standard deviation<br />in 1024<sup>2</sup> (σ in MB):
                 </label>
-                <input id="fileSizeMegabytesStandardDeviation" type="number" value="@fields.Parameters.FileSizeMegabytesStandardDeviation"
-                       @onchange="fields.Parameters.OnFileSizeMegabytesStandardDeviationChanged" class="@fields.Parameters.FileSizeMegabytesStandardDeviationClass" disabled="@simulationRunning" />
+                <input id="fileSizeMegabytesStandardDeviation" type="number"
+                       value="@fields.Parameters.FileSizeMegabytesStandardDeviation"
+                       @onchange="fields.Parameters.OnFileSizeMegabytesStandardDeviationChanged"
+                       class="@fields.Parameters.FileSizeMegabytesStandardDeviationClass"
+                       disabled="@(simulationRunCounter != null)" />
             </div>
             <div>
-                <label for="playbackBitrate" class="@fields.Parameters.PlaybackBitrateClass">Playback constant bitrate in<br />bits per second (bps):</label>
+                <label for="playbackBitrate" class="@fields.Parameters.PlaybackBitrateClass">
+                    Playback constant bitrate in<br />bits per second (bps):
+                </label>
                 <input id="playbackBitrate" type="number" value="@fields.Parameters.PlaybackBitrate"
-                       @onchange="fields.Parameters.OnPlaybackBitrateChanged" class="@fields.Parameters.PlaybackBitrateClass" disabled="@simulationRunning" />
+                       @onchange="fields.Parameters.OnPlaybackBitrateChanged"
+                       class="@fields.Parameters.PlaybackBitrateClass" disabled="@(simulationRunCounter != null)" />
             </div>
             <div>
-                <label for="nodeCapacityGigabytes" class="@fields.Parameters.NodeCapacityGigabytesClass">Max storage capacity per<br />node in 1024<sup>3</sup> bytes (GB):</label>
+                <label for="nodeCapacityGigabytes" class="@fields.Parameters.NodeCapacityGigabytesClass">
+                    Max storage capacity per<br />node in 1024<sup>3</sup> bytes (GB):
+                </label>
                 <input id="nodeCapacityGigabytes" type="number" value="@fields.Parameters.NodeCapacityGigabytes"
-                       @onchange="fields.Parameters.OnNodeCapacityGigabytesChanged" class="@fields.Parameters.NodeCapacityGigabytesClass" disabled="@simulationRunning" />
+                       @onchange="fields.Parameters.OnNodeCapacityGigabytesChanged"
+                       class="@fields.Parameters.NodeCapacityGigabytesClass"
+                       disabled="@(simulationRunCounter != null)" />
             </div>
             <div>
-                <label for="maxBandwidthMegabitsPerSecond" class="@fields.Parameters.MaxBandwidthMegabitsPerSecondClass">
+                <label for="maxBandwidthMegabitsPerSecond"
+                       class="@fields.Parameters.MaxBandwidthMegabitsPerSecondClass">
                     1 hop max bandwidth in<br />1024<sup>2</sup> bits/second (mbps)
                     <sup><b><a href="#Reference1" onclick="event.stopPropagation()">1</a></b></sup>:
                 </label>
-                <input id="maxBandwidthMegabitsPerSecond" type="number" value="@fields.Parameters.MaxBandwidthMegabitsPerSecond"
-                       @onchange="fields.Parameters.OnMaxBandwidthMegabitsPerSecondChanged" class="@fields.Parameters.MaxBandwidthMegabitsPerSecondClass" disabled="@simulationRunning" />
+                <input id="maxBandwidthMegabitsPerSecond" type="number"
+                       value="@fields.Parameters.MaxBandwidthMegabitsPerSecond"
+                       @onchange="fields.Parameters.OnMaxBandwidthMegabitsPerSecondChanged"
+                       class="@fields.Parameters.MaxBandwidthMegabitsPerSecondClass"
+                       disabled="@(simulationRunCounter != null)" />
             </div>
             <div>
-                <label for="fileCatalogSize" class="@fields.Parameters.FileCatalogSizeClass">File catalog size<br />(total number of available files):</label>
+                <label for="fileCatalogSize" class="@fields.Parameters.FileCatalogSizeClass">
+                    File catalog size<br />(total number of available files):
+                </label>
                 <input id="fileCatalogSize" type="number" value="@fields.Parameters.FileCatalogSize"
-                       @onchange="fields.Parameters.OnFileCatalogSizeChanged" class="@fields.Parameters.FileCatalogSizeClass" disabled="@simulationRunning" />
+                       @onchange="fields.Parameters.OnFileCatalogSizeChanged"
+                       class="@fields.Parameters.FileCatalogSizeClass" disabled="@(simulationRunCounter != null)" />
             </div>
             <div>
-                <label for="fileCatalogTotalFileSize">Total file catalog size<br />(number of files &times; mean file size):</label>
-                <input id="fileCatalogTotalFileSize" readonly="readonly" value="@(fields.Parameters.TotalFileCatalogGigabyteSize.ToString("f4")) GB" disabled="@simulationRunning" />
+                <label for="fileCatalogTotalFileSize">
+                    Total file catalog size<br />(number of files &times; mean file size):
+                </label>
+                <input id="fileCatalogTotalFileSize" readonly="readonly"
+                       value="@(fields.Parameters.TotalFileCatalogGigabyteSize.ToString("f4")) GB"
+                       disabled="@(simulationRunCounter != null)" />
             </div>
             <div>
                 <label for="fileCatalogSizePerNode" class="@fields.Parameters.FileCatalogGigabyteSizePerNodeClass">
                     File catalog size per node<br />(catalog size / number of nodes):
                 </label>
-                <input id="fileCatalogSizePerNode" readonly="readonly" class="@fields.Parameters.FileCatalogGigabyteSizePerNodeClass"
-                       value="@(fields.Parameters.FileCatalogGigabyteSizePerNode.ToString("f4")) GB" disabled="@simulationRunning" />
+                <input id="fileCatalogSizePerNode" readonly="readonly"
+                       class="@fields.Parameters.FileCatalogGigabyteSizePerNodeClass"
+                       value="@(fields.Parameters.FileCatalogGigabyteSizePerNode.ToString("f4")) GB"
+                       disabled="@(simulationRunCounter != null)" />
             </div>
             <div>
-                <label for="filePopularityStandardDeviation" class="@fields.Parameters.FilePopularityStandardDeviationClass">File popularity<br />standard deviation:</label>
-                <input id="filePopularityStandardDeviation" type="number" value="@fields.Parameters.FilePopularityStandardDeviation"
-                       @onchange="fields.Parameters.OnFilePopularityStandardDeviationChanged" class="@fields.Parameters.FilePopularityStandardDeviationClass" disabled="@simulationRunning" />
+                <label for="filePopularityStandardDeviation"
+                       class="@fields.Parameters.FilePopularityStandardDeviationClass">
+                    File popularity<br />standard deviation:
+                </label>
+                <input id="filePopularityStandardDeviation" type="number"
+                       value="@fields.Parameters.FilePopularityStandardDeviation"
+                       @onchange="fields.Parameters.OnFilePopularityStandardDeviationChanged"
+                       class="@fields.Parameters.FilePopularityStandardDeviationClass"
+                       disabled="@(simulationRunCounter != null)" />
             </div>
             <div>
-                <label for="maxSamplingAttempts" class="@fields.Parameters.MaxSamplingAttemptsClass">Max Sampling Attempts to ensure<br />files allocated (minimum of 1):</label>
+                <label for="maxSamplingAttempts" class="@fields.Parameters.MaxSamplingAttemptsClass">
+                    Max Sampling Attempts to ensure<br />files allocated (minimum of 1):
+                </label>
                 <input id="maxSamplingAttempts" type="number" value="@fields.Parameters.MaxSamplingAttempts"
-                       @onchange="fields.Parameters.OnMaxSamplingAttemptsChanged" class="@fields.Parameters.MaxSamplingAttemptsClass" disabled="@simulationRunning" />
+                       @onchange="fields.Parameters.OnMaxSamplingAttemptsChanged"
+                       class="@fields.Parameters.MaxSamplingAttemptsClass"
+                       disabled="@(simulationRunCounter != null)" />
             </div>
             <div>
                 <label for="meanFilePopularity">Mean file popularity<br />(readonly: 1 / File catalog size):</label>
-                <input id="meanFilePopularity" value="@((1M / fields.Parameters.FileCatalogSize).ToString("f4"))" readonly="readonly" disabled="@simulationRunning" />
+                <input id="meanFilePopularity" value="@((1M / fields.Parameters.FileCatalogSize).ToString("f4"))"
+                       readonly="readonly" disabled="@(simulationRunCounter != null)" />
             </div>
             <div>
                 <label for="bandwidthEquation">
                     Max bandwidth equation<br />over N hops (readonly)
                     <sup><b><a href="#Reference1" onclick="event.stopPropagation()">1</a></b></sup>:
                 </label>
-                <input id="bandwidthEquation" value="1 / N" readonly="readonly" disabled="@simulationRunning" />
+                <input id="bandwidthEquation" value="1 / N" readonly="readonly"
+                       disabled="@(simulationRunCounter != null)" />
+            </div>
+            <div>
+                <label for="simulationRuns">How many times to run the<br />simulation (results averaged):</label>
+                <input id="simulationRuns" type="number" value="@fields.Parameters.SimulationRuns"
+                       @onchange="fields.Parameters.OnSimulationRunsChanged"
+                       class="@fields.Parameters.SimulationRunsClass" disabled="@(simulationRunCounter != null)" />
             </div>
         </div>
         <br />
@@ -127,8 +189,16 @@
         {
             <label for="runSimulation" class="error">@fieldErrors</label>
         }
-        <button id="runSimulation" @onclick="OnRunSimulation" disabled="@(fieldErrors != "" || simulationRunning)">
-            Run Simulation
+        <button id="runSimulation" @onclick="OnRunSimulation"
+                disabled="@(fieldErrors != "" || simulationRunCounter != null)">
+            @if (simulationRunCounter == null)
+            {
+                @:Run Simulation
+            }
+            else
+            {
+                @:Simulation running...
+            }
         </button>
     </fieldset>
 }
@@ -140,12 +210,16 @@ else
         </legend>
         <div class="fields">
             <div>
-                <label for="totalTimeBuffering">Total time buffering<br />(higher is worse QoS):</label>
-                <input id="totalTimeBuffering" value="@(analysisTotalTimeBuffering.TotalMinutes.ToString("f2")) Minutes" readonly="readonly" />
+                <label for="meanBufferingTimePerNode">Mean time buffering per node<br />(higher is worse QoS):</label>
+                <input id="meanBufferingTimePerNode"
+                       value="@(analysisMeanBufferingTimePerNode.TotalMinutes.ToString("f2")) Minutes"
+                       readonly="readonly" />
             </div>
             <div>
-                <label for="meanBufferingTimePerNode">Mean time buffering per node<br />(higher is worse QoS):</label>
-                <input id="meanBufferingTimePerNode" value="@(analysisMeanBufferingTimePerNode.TotalMinutes.ToString("f2")) Minutes" readonly="readonly" />
+                <label for="bufferingTimeStandardDeviation">Standard deviation<br />of node time buffering:</label>
+                <input id="bufferingTimeStandardDeviation"
+                       value="@(analysisBufferingTimeStandardDeviation.TotalMinutes.ToString("f2")) Minutes"
+                       readonly="readonly" />
             </div>
         </div>
     </fieldset>
@@ -155,7 +229,8 @@ else
      class="nodes" viewBox="0 0 120 100">
     @for (var nodeIdx = 0; nodeIdx < fields.Parameters.Nodes; nodeIdx++)
     {
-        <circle stroke="black" stroke-width="@(fields.CircleCalc.Radius / 5d)" fill="none" r="@(fields.CircleCalc.Radius)"
+        <circle stroke="black" stroke-width="@(fields.CircleCalc.Radius / 5d)" fill="none"
+                r="@(fields.CircleCalc.Radius)"
                 cx="@(Math.Cos((fields.CircleCalc.DegreesPerNode * nodeIdx) * (Math.PI / 180)) * 30 + 40)"
                 cy="@(Math.Sin((fields.CircleCalc.DegreesPerNode * nodeIdx) * (Math.PI / 180)) * 30 + 40)" />
     }
@@ -234,14 +309,15 @@ License: BSD 2-Clause License (<a href="https://opensource.org/licenses/BSD-2-Cl
 @code {
     const double maxRadius = 5d;
 
-    static readonly Regex LineTerminationRegex = new Regex("\\r\\n?|\\n", RegexOptions.Compiled | RegexOptions.Singleline);
+    static readonly Regex LineTerminationRegex = new Regex("\\r\\n?|\\n",
+        RegexOptions.Compiled | RegexOptions.Singleline);
     IReadOnlyList<double>? simFiles;
     IReadOnlyList<SimulationEventBase>? simEvents;
     int eventIdx = 0;
     Fields fields = new Fields();
-    TimeSpan analysisTotalTimeBuffering;
     TimeSpan analysisMeanBufferingTimePerNode;
-    bool simulationRunning = false;
+    TimeSpan analysisBufferingTimeStandardDeviation;
+    int? simulationRunCounter = null;
 
     async Task OnRunSimulation()
     {
@@ -249,21 +325,48 @@ License: BSD 2-Clause License (<a href="https://opensource.org/licenses/BSD-2-Cl
         {
             return;
         }
-        simulationRunning = true;
-        await UpdateEventTextRunning();
+        simulationRunCounter = 0;
         await InvokeAsync(async () =>
         {
-            (simFiles, simEvents) = Simulation.Run(fields.Parameters);
-            var analyzed = SimulationResultAnalysis.Analyse(fields.Parameters, simEvents);
-            if (analyzed == null)
+            IReadOnlyList<double> currentSimFiles;
+            IReadOnlyList<SimulationEventBase> currentSimEvents;
+            var meanBufferingTimePerNodeArr = new TimeSpan[fields.Parameters.SimulationRuns];
+            var bufferingTimeStandardDeviationArr = new TimeSpan[fields.Parameters.SimulationRuns];
+            do
             {
-                await jsRuntime.InvokeVoidAsync("alert", "Error: analysis failed.\n\n" +
-                    "Maybe there was a file/buffer completion event without a file request?");
+                await UpdateEventTextRunning();
+                (currentSimFiles, currentSimEvents) = Simulation.Run(fields.Parameters);
+                var (currentMeanBufferingTimePerNode, currentBufferingTimeStandardDeviation) =
+                    SimulationResultAnalysis.Analyse(fields.Parameters, currentSimEvents);
+                meanBufferingTimePerNodeArr[(int)simulationRunCounter] = currentMeanBufferingTimePerNode;
+                bufferingTimeStandardDeviationArr[(int)simulationRunCounter] = currentBufferingTimeStandardDeviation;
+            } while (++simulationRunCounter < fields.Parameters.SimulationRuns);
+
+            // Only use the last simulation run for presentation display
+            simFiles = currentSimFiles;
+            simEvents = currentSimEvents;
+
+            // Only average simulation run analysis if necessary
+            if (simulationRunCounter == 1)
+            {
+                analysisMeanBufferingTimePerNode = meanBufferingTimePerNodeArr[0];
+                analysisBufferingTimeStandardDeviation = bufferingTimeStandardDeviationArr[0];
             }
             else
             {
-                (analysisTotalTimeBuffering, analysisMeanBufferingTimePerNode) = analyzed.Value;
+                var meanBufferingTimePerNodeTotalTicks = new BigInteger();
+                var bufferingTimeStandardDeviationTotalTicks = new BigInteger();
+                for (var runIdx = 0; runIdx < simulationRunCounter; runIdx++)
+                {
+                    meanBufferingTimePerNodeTotalTicks += meanBufferingTimePerNodeArr[runIdx].Ticks;
+                    bufferingTimeStandardDeviationTotalTicks += bufferingTimeStandardDeviationArr[runIdx].Ticks;
+                }
+                analysisMeanBufferingTimePerNode =
+                    new TimeSpan((long)(meanBufferingTimePerNodeTotalTicks / simulationRunCounter));
+                analysisBufferingTimeStandardDeviation =
+                    new TimeSpan((long)(bufferingTimeStandardDeviationTotalTicks / simulationRunCounter));
             }
+
             eventIdx = 0;
             await DisablePreviousEvent();
             if (simEvents?.Count <= 1)
@@ -309,7 +412,8 @@ License: BSD 2-Clause License (<a href="https://opensource.org/licenses/BSD-2-Cl
 
     async Task UpdateEventTextRunning()
     {
-        await jsRuntime.InvokeVoidAsync("setEventTextRunning", "Simulation started...");
+        await jsRuntime.InvokeVoidAsync("setEventTextRunning",
+            $"Simulation run {simulationRunCounter} out of {fields.Parameters.SimulationRuns} in progress...");
     }
 
     async Task ProcessChangedEventIdx()
