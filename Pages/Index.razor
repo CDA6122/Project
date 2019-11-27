@@ -227,39 +227,60 @@ else
 
 <svg xmlns="http://www.w3.org/2000/svg"
      class="nodes" viewBox="0 0 120 100">
-    @for (var nodeIdx = 0; nodeIdx < fields.Parameters.Nodes; nodeIdx++)
-    {
-        <circle stroke="black" stroke-width="@(fields.CircleCalc.Radius / 5d)" fill="none"
-                r="@(fields.CircleCalc.Radius)"
-                cx="@(Math.Cos((fields.CircleCalc.DegreesPerNode * nodeIdx) * (Math.PI / 180)) * 30 + 40)"
-                cy="@(Math.Sin((fields.CircleCalc.DegreesPerNode * nodeIdx) * (Math.PI / 180)) * 30 + 40)" />
-    }
-    @if (simEvents == null)
-    {
-        <foreignObject x="25" y="400" width="550" height="70" transform="scale(0.2)">
-            <div xmlns="http://www.w3.org/1999/xhtml" class="svg-text" id="eventTextRunning">
-                Simulation not yet started.
-            </div>
-        </foreignObject>
-        <rect x="5" y="80" width="110" height="15" stroke="red" stroke-width="0.5" fill="none" />
-    }
-    else
-    {
-        <foreignObject x="25" y="450" width="450" height="30" transform="scale(0.2)">
-            <table xmlns="http://www.w3.org/1999/xhtml" class="full-width">
-                <tbody>
-                    <tr>
-                        <td><button id="previousEvent">Previous Event</button></td>
-                        <td class="text-center" id="currentEventNumber"></td>
-                        <td><button id="nextEvent">Next Event</button></td>
-                    </tr>
-                </tbody>
-            </table>
-        </foreignObject>
-        <foreignObject x="500" y="25" width="200" height="450" transform="scale(0.2)">
-            <div xmlns="http://www.w3.org/1999/xhtml" class="svg-text" id="eventText"></div>
-        </foreignObject>
-        <rect x="100" y="5" width="45" height="90" stroke="black" stroke-width="0.5" fill="none" />
+    @{
+        (double nextCircleX, double nextCircleY)? nextCircle = null;
+        for (var nodeIdx = 0; nodeIdx < fields.Parameters.Nodes; nodeIdx++)
+        {
+            var nextNodeIdxClockwise = nodeIdx == fields.Parameters.Nodes - 1 ? 0 : nodeIdx + 1;
+            var (circleX, circleY) = nextCircle ?? nextCircleCenter(nodeIdx);
+            nextCircle = nextCircleCenter(nextNodeIdxClockwise);
+            if (simulationViewModel?.ClockwiseConnectionLines[nodeIdx] is bool saturated)
+            {
+                <line x1="@circleX" x2="@(nextCircle?.nextCircleX)" y1="@circleY" y2="@(nextCircle?.nextCircleY)"
+                      stroke="@(saturated ? "red" : "green")" stroke-width="@(fields.CircleCalc.Radius / 5d)"
+                      stroke-linecap="round" />
+            }
+
+            <text>
+                <text class="svg-text" x="@(circleX + 1.2d * fields.CircleCalc.Radius)" y="@circleY"
+                      style="@($"font-size: {fields.CircleCalc.Radius * 10d / maxRadius:f10}px;")">@nodeIdx</text>
+            </text>
+            <circle stroke="black" stroke-width="@(fields.CircleCalc.Radius / 5d)" fill="none"
+                    r="@(fields.CircleCalc.Radius)" cx="@circleX" cy="@circleY" />
+        }
+        if (simEvents == null)
+        {
+            <foreignObject x="25" y="400" width="550" height="70" transform="scale(0.2)">
+                <div xmlns="http://www.w3.org/1999/xhtml" class="svg-text" id="eventTextRunning">
+                    Simulation not yet started.
+                </div>
+            </foreignObject>
+            <rect x="5" y="80" width="110" height="15" stroke="red" stroke-width="0.5" fill="none" />
+        }
+        else
+        {
+            <foreignObject x="25" y="450" width="450" height="30" transform="scale(0.2)">
+                <table xmlns="http://www.w3.org/1999/xhtml" class="full-width">
+                    <tbody>
+                        <tr>
+                            <td><button id="previousEvent">Previous Event</button></td>
+                            <td class="text-center" id="currentEventNumber"></td>
+                            <td><button id="nextEvent">Next Event</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </foreignObject>
+            <foreignObject x="500" y="25" width="200" height="450" transform="scale(0.2)">
+                <div xmlns="http://www.w3.org/1999/xhtml" class="svg-text" id="eventText"></div>
+            </foreignObject>
+            <rect x="100" y="5" width="45" height="90" stroke="black" stroke-width="0.5" fill="none" />
+        }
+
+        (double circleX, double circleY) nextCircleCenter(int nodeIdx) =>
+        (
+            Math.Cos((fields.CircleCalc.DegreesPerNode * nodeIdx) * (Math.PI / 180)) * 30 + 40,
+            Math.Sin((fields.CircleCalc.DegreesPerNode * nodeIdx) * (Math.PI / 180)) * 30 + 40
+        );
     }
 </svg>
 
@@ -321,7 +342,7 @@ License: BSD 2-Clause License (<a href="https://opensource.org/licenses/BSD-2-Cl
         RegexOptions.Compiled | RegexOptions.Singleline);
     IReadOnlyList<double>? simFiles;
     IReadOnlyList<SimulationEventBase>? simEvents;
-    int eventIdx = 0;
+    SimulationViewModel? simulationViewModel;
     Fields fields = new Fields();
     TimeSpan analysisMeanBufferingTimePerNode;
     TimeSpan analysisBufferingTimeStandardDeviation;
@@ -375,9 +396,9 @@ License: BSD 2-Clause License (<a href="https://opensource.org/licenses/BSD-2-Cl
                     new TimeSpan((long)(bufferingTimeStandardDeviationTotalTicks / simulationRunCounter));
             }
 
-            eventIdx = 0;
+            simulationViewModel = new SimulationViewModel(fields.Parameters, simEvents);
             await DisablePreviousEvent();
-            if (simEvents?.Count <= 1)
+            if (simulationViewModel.AtEnd)
             {
                 await DisableNextEvent();
             }
@@ -386,20 +407,22 @@ License: BSD 2-Clause License (<a href="https://opensource.org/licenses/BSD-2-Cl
         });
     }
 
-    string GetCurrentEventNumber() => $"Event {eventIdx + 1:#,##0} of {simEvents?.Count:#,##0}";
-
-    MarkupString GetEventText() => (MarkupString)string.Join(
-        "<br/>",
-        LineTerminationRegex
-            .Split(simEvents?[eventIdx]?.ToString())
-            .Select(HttpUtility.HtmlEncode));
+    MarkupString? GetEventText() => simulationViewModel?.CurrentEventText == null
+        ? (MarkupString?)null
+        : (MarkupString)string.Join(
+            "<br/>",
+            LineTerminationRegex
+                .Split(simulationViewModel.CurrentEventText)
+                .Select(HttpUtility.HtmlEncode));
 
     #region JavaScript interop (BlazorServer currently has a bug modifying svg foreignObject children)
 
     [JSInvokable]
     public async Task OnPreviousEvent()
     {
-        if (--eventIdx == 0)
+        simulationViewModel?.PreviousEvent();
+        StateHasChanged();
+        if (simulationViewModel?.AtBeginning == true)
         {
             await DisablePreviousEvent();
         }
@@ -410,7 +433,9 @@ License: BSD 2-Clause License (<a href="https://opensource.org/licenses/BSD-2-Cl
     [JSInvokable]
     public async Task OnNextEvent()
     {
-        if (++eventIdx == simEvents?.Count - 1)
+        simulationViewModel?.NextEvent();
+        StateHasChanged();
+        if (simulationViewModel?.AtEnd == true)
         {
             await DisableNextEvent();
         }
@@ -426,8 +451,8 @@ License: BSD 2-Clause License (<a href="https://opensource.org/licenses/BSD-2-Cl
 
     async Task ProcessChangedEventIdx()
     {
-        await jsRuntime.InvokeVoidAsync("setCurrentEventNumber", GetCurrentEventNumber());
-        await jsRuntime.InvokeVoidAsync("setEventText", GetEventText().Value);
+        await jsRuntime.InvokeVoidAsync("setCurrentEventNumber", simulationViewModel?.CurrentEventNumber);
+        await jsRuntime.InvokeVoidAsync("setEventText", GetEventText()?.Value);
     }
 
     async Task DisablePreviousEvent()

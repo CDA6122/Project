@@ -8,7 +8,7 @@
     "appId": "com.Project.app",
     "productName": "Project",
     "copyright": "Copyright © 2019 David Bruck and Freguens Mildort",
-    "buildVersion": "0.0.3",
+    "buildVersion": "1.0.0",
     "compression": "maximum",
     "directories": {
       "output": "../../../bin/Desktop"
