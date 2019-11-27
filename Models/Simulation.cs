@@ -381,9 +381,20 @@ namespace Project.Models
                 double additionalBufferedBits = (@event - previousEvent).TotalSeconds * bandwidthBitsPerSecond;
                 events.Add(new SimulationEventFullyBuffered(@event - DateTime.MinValue, nodeIdx, bufferedMegabytes +
                     (additionalBufferedBits / 1024d / 1024d / 8d)));
-                DateTime nextScheduledEvent = @event.AddSeconds(
-                    ((sampleFiles[fileIdx].fileSizeMegabytes - bufferedMegabytes) * 1024d * 1024d * 8d -
-                        additionalBufferedBits) / bandwidthBitsPerSecond);
+                DateTime nextScheduledEvent;
+                try
+                {
+                    nextScheduledEvent = @event.AddSeconds(
+                        ((sampleFiles[fileIdx].fileSizeMegabytes - bufferedMegabytes) * 1024d * 1024d * 8d -
+                            additionalBufferedBits) / bandwidthBitsPerSecond);
+                }
+                catch (ArgumentOutOfRangeException) when (bandwidthBitsPerSecond > 0d)
+                {
+                    // Expect small values for bandwidthBitsPerSecond to sum up to a DateTime so far in the future it
+                    // produces the following error:
+                    // System.ArgumentOutOfRangeException: Value to add was out of range. (Parameter 'value')
+                    nextScheduledEvent = DateTime.MaxValue;
+                }
                 nodesData[nodeIdx] = (fileIdx, connectionNodeIdx, @event, nextScheduledEvent, bandwidthBitsPerSecond,
                     double.NaN, clockwise);
                 return nextScheduledEvent;

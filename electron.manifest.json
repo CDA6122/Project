@@ -1,14 +1,14 @@
 {
   "executable": "Project",
   "splashscreen": {
-    "imageFile": ""
+    "imageFile": "/wwwroot/images/fau.jpg"
   },
   "singleInstance": false,
   "build": {
     "appId": "com.Project.app",
     "productName": "Project",
     "copyright": "Copyright © 2019 David Bruck and Freguens Mildort",
-    "buildVersion": "0.0.2",
+    "buildVersion": "0.0.3",
     "compression": "maximum",
     "directories": {
       "output": "../../../bin/Desktop"
@@ -17,16 +17,25 @@
       {
         "from": "./bin",
         "to": "bin",
-        "filter": ["**/*"]
+        "filter": [ "**/*" ]
       }
     ],
     "files": [
       {
         "from": "./ElectronHostHook/node_modules",
         "to": "ElectronHostHook/node_modules",
-        "filter": ["**/*"]
+        "filter": [ "**/*" ]
       },
       "**/*"
-    ]
+    ],
+    "win": {
+      "icon": "../../../fau.ico"
+    },
+    "linux": {
+      "icon": "../../../fau.png"
+    },
+    "mac": {
+      "icon": "../../../fau.png"
+    }
   }
 }
