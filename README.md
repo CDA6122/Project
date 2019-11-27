@@ -225,14 +225,24 @@ However, simulating with 50 nodes instead shows a more complex trend. At low sto
 
 We can see that as content distribution is applied to larger and larger networks (more nodes). Each node will see a greater benefit in QoS for additional storage capacity allocated to content distribution. Also, we can see that the benefits may taper off at some point and it may no longer be as cost-effective to add additional storage capacity to achieve higher QoS.
 
+### Further Research
+
+Further research could include verification that the code contains no bugs, and we could validate with a real-world model.
+
+We could also simulate individual network packets for a better simulation of wireless interference and error correction and their affects on bandwidth. One existing discrete-event network simulator we could use is ns-3[^ns-3]. Also, we could simulate with complete node failures and also additional wireless networking channels and simulate other sources of error like external interference.
+
+We could use a more realistic node distribution. Instead of arranging the nodes in a ring network, they could model a real-world distribution. Also, instead of each node only being able to make a connection to the nearest node clockwise or counterclockwise, they would have additional options for connectivity, at different distances which would affect their potential bandwidth. Also, multiple routes simultaneously could be used for nodes to more fully saturate available bandwidth.
+
 
 
 ## Bibliography
 
-[^application-layer-multicast-of-multimedia-delivery]: Le, T.A., Nguyen, H. & Nguyen, M.C. “Application-network cross layer multi-variable cost function for application layer multicast of multimedia delivery over convergent networks”. Wireless Networks (2015) 21: 2677. https://doi.org/10.1007/s11276-015-0940-1  
+Le, T.A., Nguyen, H. & Nguyen, M.C. “Application-network cross layer multi-variable cost function for application layer multicast of multimedia delivery over convergent networks”. Wireless Networks (2015) 21: 2677. https://doi.org/10.1007/s11276-015-0940-1  
 
-[^solving-the-wireless-mesh-multi-hop-dilemma]: “Solving the Wireless Mesh Multi-Hop Dilemma.” (2005). Whitepaper. Strix Systems. http://www.strixsystems.com/products/datasheets/strixwhitepaper_multihop.pdf  
+“Solving the Wireless Mesh Multi-Hop Dilemma.” (2005). Whitepaper. Strix Systems. http://www.strixsystems.com/products/datasheets/strixwhitepaper_multihop.pdf  
 
+[^application-layer-multicast-of-multimedia-delivery]: https://doi.org/10.1007/s11276-015-0940-1
+[^solving-the-wireless-mesh-multi-hop-dilemma]: http://www.strixsystems.com/products/datasheets/strixwhitepaper_multihop.pdf
 [^math.net-numerics]: https://numerics.mathdotnet.com/  
 [^windows]:  http://microsoft.com/windows  
 [^macos]: https://www.apple.com/macos  
@@ -247,6 +257,7 @@ We can see that as content distribution is applied to larger and larger networks
 [^nodejs]: https://nodejs.org/  
 [^dotnet]: https://dotnet.microsoft.com/  
 [^blazor]: https://docs.microsoft.com/en-us/aspnet/core/blazor
+[^ns-3]: https://www.nsnam.org/
 
 
 
